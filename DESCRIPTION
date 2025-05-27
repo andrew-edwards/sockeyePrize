@@ -1,0 +1,33 @@
+Package: sockeyePrize
+Title: An R package for entering the SalmonPrize competition
+Version: 0.0.99
+Authors@R: c(
+    person(c("A.", "M."), "Edwards",
+        email = "andrew.edwards@dfo-mpo.gc.ca",
+        role = c("aut", "cre"),
+        comment = c(ORCID = "0000-0003-2749-8198")),
+	person(c("C.", "A."), "Holt",
+        email = "carrie.edwards@dfo-mpo.gc.ca",
+        role = c("aut"))
+URL: https://github.com/andrew-edwards/sockeyePrize
+BugReports: https://github.com/andrew-edwards/sockeyePrize/issues
+Maintainer: Andrew Edwards <andrew.edwards@dfo-mpo.gc.ca>
+Date: 2025-05-25
+Description: Code for our entry into the SalmonPrize competition.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+LazyDataCompression: xz
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Remotes: github::pbs-assess/pacea
+Imports:
+    dplyr (>= 1.0.2),
+Suggests:
+    rmarkdown,
+    knitr,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Depends:
+    R (>= 3.5)
