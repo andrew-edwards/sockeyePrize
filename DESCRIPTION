@@ -6,9 +6,9 @@ Authors@R: c(
         email = "andrew.edwards@dfo-mpo.gc.ca",
         role = c("aut", "cre"),
         comment = c(ORCID = "0000-0003-2749-8198")),
-	person(c("C.", "A."), "Holt",
-        email = "carrie.edwards@dfo-mpo.gc.ca",
-        role = c("aut"))
+    person(c("C.", "A."), "Holt",
+        email = "carrie.holt@dfo-mpo.gc.ca",
+        role = c("aut")))
 URL: https://github.com/andrew-edwards/sockeyePrize
 BugReports: https://github.com/andrew-edwards/sockeyePrize/issues
 Maintainer: Andrew Edwards <andrew.edwards@dfo-mpo.gc.ca>
