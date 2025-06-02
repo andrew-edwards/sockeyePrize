@@ -1,0 +1,134 @@
+---
+title: "Wrangling data for 2025 competition"
+author: "Andrew Edwards and Carrie Holt"
+output: pdf_document
+fontsize: 12pt
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r, setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "",
+  cache = TRUE,
+  cache_path = "data-2025-cache/",
+  fig.path = "data-2025-figs-cache/",
+  fig.width = 7,
+  fig.height = 6
+)
+  # comment = "#>",
+```
+
+```{r, build, echo = FALSE, eval = FALSE}
+# To build either run this line or click knit button in RStudio:
+rmarkdown::render("data-2025.Rmd")
+```
+
+```{r, packages, echo = FALSE}
+library(dplyr)
+load_all()
+```
+
+Wrangling the data. From instructions Word file:
+
+
+To assist Salmon Prize teams in rapidly developing their estimates, we have pre-packaged brood and return tables for the fourteen runs across three systems. This includes:
+
+1.	All 14 runs across the three systems
+a.	Brood table
+b.	Return table
+c.	First year at sea table
+
+2.	Bristol Bay System — covering eight runs ()
+a.	Brood table
+b.	Return Table
+
+3.	Fraser River — covering five runs ()
+a.	Brood table
+b.	Return table
+
+4.	Columbia River — one run covering the entire system
+a.	Brood table
+b.	Return table
+
+These tables have been prepared by Alejandro Yanez. If anyone has any questions please reach out to Alejandro by email at a.yanez@oceans.ubc.ca.
+
+--
+
+So it seems that we can just get those in part 1. Will wrangle them a little and
+make into data objects in our package.
+
+
+# Data loading
+
+
+```{r, datapreparation}
+data_dir <- paste0(here::here(),
+                   "/data-raw/data-for-2025-competition/Brood_Return_First_Year_At_Sea_Tables/")
+
+brood_all_raw <- read.csv(paste0(data_dir,
+                                 "Combined_Brood_Bristol_Columbia_Fraser.csv")) %>%
+  tibble::as_tibble()
+
+brood_all_raw
+
+names(brood_all_raw)
+
+brood_all <- brood_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor) %>%
+  dplyr::select(-"X")
+
+brood_all
+
+summary(brood_all)
+```
+
+Now do same for returns and then first year at sea:
+```{r, datapreparation2}
+returns_all_raw <- read.csv(paste0(data_dir,
+                                 "Combined_Return_Bristol_Columbia_Fraser.csv")) %>%
+  tibble::as_tibble()
+
+returns_all_raw
+
+names(returns_all_raw)
+
+returns_all <- returns_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor) %>%
+  dplyr::select(-"X")
+
+returns_all
+
+summary(returns_all)
+```
+
+```{r, datapreparation3}
+at_sea_all_raw <- read.csv(paste0(data_dir,
+                                 "Combined_First_Year_At_Sea.csv")) %>%
+  tibble::as_tibble()
+
+at_sea_all_raw
+
+names(at_sea_all_raw)
+
+at_sea_all <- at_sea_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor) %>%
+  dplyr::select(-"X")
+
+at_sea_all
+
+summary(at_sea_all)
+```
+
+Save data in package:
+```{r, savedata}
+usethis::use_data(brood_all)
+usethis::use_data(returns_all)
+usethis::use_data(at_sea_all)
+```
