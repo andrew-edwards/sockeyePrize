@@ -25,7 +25,7 @@ library(tibble)
 library(badger)
 ```
 
-# sizeSpectra2
+# sockeyePrize
 
 <!-- badges: start -->
 `r badge_lifecycle("under development", "orange")`
@@ -36,6 +36,16 @@ library(badger)
 
 An R package for entering the SalmonPrize competition
 
+# Data objects
+
+Currently just has the provided data wrangled into tibbles that are saved as
+data objects in this package. So can do:
+
+```{r}
+at_sea_all
+brood_all
+returns_all
+```
 
 ## Installation
 
