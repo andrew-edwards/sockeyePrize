@@ -1,0 +1,69 @@
+---
+title: "Wrangling North Pacific Salmon data"
+author: "Andrew Edwards and Carrie Holt"
+output: pdf_document
+fontsize: 12pt
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r, setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "",
+  cache = FALSE,
+  # cache_path = "data-2025-cache/",
+  # fig.path = "data-2025-figs-cache/",
+  fig.width = 7,
+  fig.height = 6
+)
+  # comment = "#>",
+```
+
+```{r, build, echo = FALSE, eval = FALSE}
+# To build either run this line or click knit button in RStudio:
+rmarkdown::render("north-pacific-salmon.Rmd")
+```
+
+```{r, packages, echo = FALSE}
+library(dplyr)
+load_all()
+```
+
+From Brendan (30/4/25 email to Carrie):
+
+"The attached are the most up to date data and best citation would be: Connors, B., Ruggerone, G.T. and Irvine, J.R., 2025. Adapting management of Pacific salmon to a warming and more crowded ocean. ICES Journal of Marine Science, 82(1), p.fsae135.
+
+If you need 2024 returns I could probably work with Greg later in May to compile. "
+
+# Data loading
+
+
+```{r, datapreparation}
+data_dir <- paste0(here::here(),
+                   "/data-raw/")
+
+total_raw <- read.csv(paste0(data_dir,
+                                 "total_np_salmon.csv")) %>%
+  tibble::as_tibble()
+
+np_salmon <- mutate(total_raw,
+                    return_year = Return.Year,
+                    pink = Pink,
+                    chum = Chum,
+                    sockeye = Sockeye,
+                    total = Total) %>%
+  select(return_year,
+         pink,
+         chum,
+         sockeye,
+         total)
+
+np_salmon
+
+summary(np_salmon)
+```
+
+Save data in package:
+```{r, savedata}
+usethis::use_data(np_salmon)
+```

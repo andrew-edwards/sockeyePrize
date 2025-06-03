@@ -1,0 +1,200 @@
+---
+title: "Analysing data for 2025 competition"
+author: "Andrew Edwards and Carrie Holt"
+output: pdf_document
+fontsize: 12pt
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r, setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "",
+  cache = TRUE,
+  cache_path = "analysis-2025-cache/",
+  fig.path = "analysis-2025-figs-cache/",
+  fig.width = 7,
+  fig.height = 6
+)
+  # comment = "#>",
+```
+
+```{r, build, echo = FALSE, eval = FALSE}
+# To build either run this line or click knit button in RStudio:
+rmarkdown::render("analysis-2025.Rmd")
+```
+
+```{r, packages, echo = FALSE}
+library(dplyr)
+load_all()
+# remotes::install_github("pbs-assess/pbsEDM")
+library(pbsEDM)
+library(pacea)    # make sure to update
+```
+
+# Data
+
+Data are saved within the current package, as supplied by organisers (see
+data-raw/data-2025.Rmd for details):
+
+1.	All 14 runs across the three systems
+a.	Brood table
+b.	Return table
+c.	First year at sea table
+
+```{r data}
+brood_all
+returns_all
+at_sea_all
+```
+
+# Understanding data, just Chilko
+
+## Brood data
+
+Just look at brood data first:
+```{r understand}
+summary(brood_all)
+
+summary(dplyr::filter(brood_all, System == "Fraser River"))
+```
+
+Shows there are five funs for Fraser River. Let's just focus on one:
+
+```{r onerun}
+one_brood <- dplyr::filter(brood_all, River == "Chilko")
+
+sum(one_brood[1, 5:22], na.rm = TRUE)
+one_brood$Total_Recruits[1]
+
+sum(one_brood[7, 5:22], na.rm = TRUE)
+one_brood$Total_Recruits[7]
+```
+`Total_Recruits` seems to be sum of other columns.
+
+If spawned in Sept/Oct 2013 (BroodYear), go to sea summer 2014. Then
+`AgeClass_0.3` is spawners that spent 0 winters (ignore them being eggs) in
+freshwater and three winters in ocean. So they come back to themselves in 2017,
+as age 4. Add together the numbers and add 1 to get the age. Recruits looks to
+be the sum of the ageClass columns.
+
+Brood data (this might not be needed):
+
+```{r sum}
+classes_age4 <- c("AgeClass_0.3",
+                  "AgeClass_1.2",
+                  "AgeClass_2.1")
+
+classes_age5 <- c("AgeClass_0.4",
+                  "AgeClass_1.3",
+                  "AgeClass_2.2",
+                  "AgeClass_3.1")
+
+one_brood_age45 <- rowwise(one_brood) %>%
+  mutate(age4 = sum(c_across(any_of(classes_age4)),
+                    na.rm = TRUE)) %>%
+  mutate(age5 = sum(c_across(any_of(classes_age5)),
+                    na.rm = TRUE)) %>%
+  ungroup() %>%
+  select("System",
+         "River",
+         "BroodYear",
+         "age4",
+         "age5")
+
+one_brood_age45 %>% pacea::a()
+# Bristol Bay would have four age classes
+```
+
+## Returns
+
+We want to predict `returns_all$Total_Returns`, by doing age4 and age5
+separately and then sum.
+
+```{r sumreturns}
+one_returns <- dplyr::filter(returns_all, River == "Chilko")
+
+classes_age4 <- c("AgeClass_0.3",
+                  "AgeClass_1.2",
+                  "AgeClass_2.1")
+
+classes_age5 <- c("AgeClass_0.4",
+                  "AgeClass_1.3",
+                  "AgeClass_2.2",
+                  "AgeClass_3.1")
+
+one_returns_age45 <- rowwise(one_returns) %>%
+  mutate(age4 = sum(c_across(any_of(classes_age4)),
+                    na.rm = TRUE)) %>%
+  mutate(age5 = sum(c_across(any_of(classes_age5)),
+                    na.rm = TRUE)) %>%
+  ungroup() %>%
+  select("System",
+         "River",
+         "ReturnYear",
+         "age4",
+         "age5")
+
+one_returns_age45 %>% a()
+```
+
+
+
+## At Sea
+
+`Juveniles_Marine_Entry` is sum of other columns.
+
+Bristol Bay: all separate 1.2, 1.3, 2.2 and 2.3. Based on what they recommend.
+
+
+
+# Fraser River
+
+What we would put into pbsEDM.
+
+Try to predict:
+
+- age4 returns each year, say 2021 as an example. From `one_returns_age45`.
+
+- age5 returns each year (2021), an additional covariate would be age4 returns.
+
+Do each seperately and then give the sum as the total prediction.
+
+Covariates would be:
+
+- at-sea total abundances two years prior (2019) to the return year for age4.
+
+- at-sea total abundances average of two years ago and three years (2018 and 2019) ago prior to
+  the return year for age5 for Chilko, for others just do three years ago (2018).
+
+- PDO in the winter (Nov 2018 to Mar 2019) preceding outmigration for age4.
+
+- PDO in the winter (average of Nov 2017 to Mar 2018 and Nov 2018 to Mar 2019)
+  preceding outmigration for age5 for Chilko.
+
+- PDO in the winter (Nov 2017 to Mar 2018) preceding outmigration for other
+  age5's.
+
+- Temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood
+  Knolls" (Apr-Jul average), "Halibut Bank" (Apr-Jun average). Year of
+  outmigration, after the PDO Mar calculation.
+
+- peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
+  (same as buoy temperatures). Try Chris's code.
+
+- total pink salmon abundance in N Pacific. Second or third years of marine
+  life (as competition). Year after the temperature data (second year).
+  W: Carrie contacting Hannah Hunter. `np_salmon` has `return_year`, can use no
+  lag (though might have to).
+
+- total salmon abundance in N Pacific. Same as pink.
+
+- copepods the year of outmigration (same as SST). Total biomass anomaly.
+
+- bifurcation index, year of outmigration.
+
+# Bristol Bay
+
+
+
+# Columbia River
