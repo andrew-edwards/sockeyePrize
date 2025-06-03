@@ -227,7 +227,7 @@ Covariates would be:
 
 - total salmon abundance in N Pacific returning the year prior to the year being predicted (2020), to predict AgeClass_1.3 and AgeClass_2.3 returns (an alternative hypothesis is that salmon in the same return year as being predicted could be used for these age classes as well)
 
-- additional covariates for which we currently do not have data: 
+- additional covariates for which we currently do not have data:
 
 - Median Bristol Bay Sea Level Pressure between May–August in year cohort entered ocean (source: ERDDAP ICOADS)
 
@@ -362,7 +362,7 @@ Covariates would be:
 
 # Analysis for Fraser River
 
-Construct `input_age4` tibble to go into pbsEDM, based on ideas above. `return_year` is the year that
+Gradually construct `input_age4` tibble to go into pbsEDM, based on ideas above. `return_year` is the year that
 the age4's return to freshwater, and other variables will be time-shifted such
 that we expect the influence to correspond to `return_year`; i.e. 2021
 represents the influence on returns in 2021, but the PDO column represent PDO from a few
@@ -377,22 +377,31 @@ input_age4 <- select(one_returns_age45,      # only for Chilko
   filter(return_year != 1951)       # since age4 is 0 for 1951.
 
 
-at_sea_abundance <- filter(at_sea_all,
-                           River == river) %>%
+at_sea <- filter(at_sea_all,
+                 River == river) %>%
   select(marine_entry_year = MarineEntryYear,
-         total_abundance = Juveniles_Marine_Entry) %>%
+         at_sea_abundance = Juveniles_Marine_Entry) %>%
   mutate(return_year = marine_entry_year + 2)
 
-at_sea_abundance
+at_sea
 
-at_sea_abundance$total_abundance     # visually check that only early and end ones
-                                     # are 0, for next line
+# at_sea$at_sea_abundance     # visually check that only early and end ones
+                              # are 0, for next line. Think can do at end, as
+                              # left_join will take care of some.
 
-at_sea_abundance <- filter(at_sea_abundance,
-                           total_abundance > 0)
+# at_sea <- filter(at_sea_abundance,
+#                           total_abundance > 0)
 
-at_sea_abundance
+input_age4 <- left_join(input_age4, at_sea) %>%
+  select(-"marine_entry_year")
 
-input_age4 # HERE
+input_age4
+```
+
+Now for PDO.
+
+
+```{r pdo}
+
 
 ```
