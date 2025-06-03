@@ -398,10 +398,65 @@ input_age4 <- left_join(input_age4, at_sea) %>%
 input_age4
 ```
 
-Now for PDO.
-
+Now for PDO. Bit fiddly to group Nov to Mar, doing a quick kludge here but
+should generalise in a function and add some checks.
 
 ```{r pdo}
+winter_months <- c(1, 2, 3, 11, 12)
+pdo_winter_months <- filter(pdo, month %in% winter_months)
+pdo_winter_months <- pdo_winter_months[-(1:3), ]    # need to generalise
+pdo_winter_months <- cbind(pdo_winter_months,
+                           winter_group = rep(1:(length(unique(pdo_winter_months$year)) - 1),
+                                              each = length(winter_months))) %>%
+  as_tibble()
+pdo_winter_months
 
+pdo_winter <- summarise(group_by(pdo_winter_months,
+                                 winter_group),
+                        return_year = max(year) + 2,
+                        pdo_winter_mean = mean(anomaly)) %>%
+  select(-c("winter_group"))
+
+pdo_winter
+
+input_age4 <- left_join(input_age4, pdo_winter)
+
+input_age4
+tail(input_age4)
+```
+
+## Quick EDM
+
+Do a quick pbsEDM as proof of concept and to see what we get. Then go back to
+previous section to carry on.
+
+From `analyse_simple_time_series` vignette.
+
+Try no covariates, iterate over $E$:
+
+```{r, edm2}
+res_univariate <- pbsEDM_Evec(input_age4$age4)
+plot_pbsEDM_Evec(res_univariate,
+                 portrait = FALSE)
+
+plot_rho_Evec(res_univariate)
+```
+That suggests $E=5$ when using no covariates, and the prediction for 2025 would
+be the last (CHECK) of these:
+```{r pred1}
+res_univariate[[4]]$N_forecast
+```
+
+HERE
+
+Now try some covariates, need to understand what is going on here.
+
+```{r edm1}
+res <- pbsEDM(input_age4,
+              lags = list(age4 = c(0, 4),
+                          at_sea_abundance = 0,
+                          pdo_winter_mean = 0),
+              first_difference = TRUE)
+```
 
 ```
