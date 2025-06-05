@@ -375,7 +375,8 @@ input_age4 <- select(one_returns_age45,      # only for Chilko
                      return_year = ReturnYear,
                      age4) %>%
   filter(return_year != 1951)       # since age4 is 0 for 1951.
-
+input_age4 <- rbind(input_age4,
+                    c(max(input_age4$return_year) + 1, NA))  # Add forecast year
 
 at_sea <- filter(at_sea_all,
                  River == river) %>%
@@ -384,6 +385,7 @@ at_sea <- filter(at_sea_all,
   mutate(return_year = marine_entry_year + 2)
 
 at_sea
+at_sea %>% tail()    # This has 2025 return_year, which we need.
 
 # at_sea$at_sea_abundance     # visually check that only early and end ones
                               # are 0, for next line. Think can do at end, as
@@ -396,10 +398,11 @@ input_age4 <- left_join(input_age4, at_sea) %>%
   select(-"marine_entry_year")
 
 input_age4
+input_age4 %>% tail()
 ```
 
 Now for PDO. Bit fiddly to group Nov to Mar, doing a quick kludge here but
-should generalise in a function and add some checks.
+should generalise in a function and add some checks. TODO
 
 ```{r pdo}
 winter_months <- c(1, 2, 3, 11, 12)
@@ -417,15 +420,20 @@ pdo_winter <- summarise(group_by(pdo_winter_months,
                         pdo_winter_mean = mean(anomaly)) %>%
   select(-c("winter_group"))
 
-pdo_winter
+pdo_winter %>% tail()
 
 input_age4 <- left_join(input_age4, pdo_winter)
 
 input_age4
-tail(input_age4)
+input_age4 %>% tail()
+
+prediction_year_index <- nrow(input_age4)
+prediction_year_index
+expect_equal(pull(input_age4[prediction_year_index, "return_year"] ),
+             2025)
 ```
 
-## Quick EDM
+## Quick EDM, no covariates
 
 Do a quick pbsEDM as proof of concept and to see what we get. Then go back to
 previous section to carry on.
@@ -441,22 +449,87 @@ plot_pbsEDM_Evec(res_univariate,
 
 plot_rho_Evec(res_univariate)
 ```
-That suggests $E=5$ when using no covariates, and the prediction for 2025 would
-be the last (CHECK) of these:
+Does not have the three-armed structure like our simulated model did in our paper.
+
+Those results suggest $E=5$ when using no covariates, and the prediction for 2025 would
+be the last of these (I think):
 ```{r pred1}
+res_univariate[[4]]$results
+
 res_univariate[[4]]$N_forecast
+res_univariate[[4]]$N_forecast[prediction_year_index]
 ```
 
-HERE
+Though they the observed and forecast $N$ look quite different:
+```{r obsN}
+plot(res_univariate[[4]]$N_observed,
+     res_univariate[[4]]$N_forecast)
+```
 
-Now try some covariates, need to understand what is going on here.
+and indeed, `N_rho$ is only `r round(res_univariate[[4]]$results$N_rho, 2)` as seen above.
+
+
+## EDM with covariates
+
+Now try some covariates, need to understand what is going on here. Lots of
+options though. See multiview embedding also.
 
 ```{r edm1}
 res <- pbsEDM(input_age4,
-              lags = list(age4 = c(0, 4),
+              lags = list(age4 = c(0, 5),
                           at_sea_abundance = 0,
                           pdo_winter_mean = 0),
-              first_difference = TRUE)
-```
+              first_difference = TRUE,
+              centre_and_scale = TRUE)
+
+plot(res, portrait = FALSE)
 
 ```
+
+## Multiview embedding
+
+From `mve_understanding` sort-of-vignette:
+```{r mve}
+lags_for_mve <- list(age4 = 1:5,   # 0 gives an error, whih makes sense as the response
+                     at_sea_abundance = 0,
+                     pdo_winter_mean = 0)
+mve_full <- multiview_embedding(data = input_age4,
+                                response = "age4",
+                                lags = lags_for_mve)
+
+# These look to be useful:
+
+mve_full$top_subsets_for_rho_index
+mve_full$rho_each_top_subset
+mve_full$lags_of_top_subsets
+
+mve_full$response_predicted_from_each_top_subset %>% tail()  # Note that row 74,
+                                        # prediction_year_index, has two the
+                                        # same (for age4=1:2 in lags).
+
+mve_full$rho_prediction_from_mve
+
+mve_full$response_predicted_from_mve
+
+mve_full$response_predicted_from_mve[prediction_year_index]  # The year of interest
+
+```
+
+Last one has NA from just one prediction. It's this:
+`
+[[9]]$at_sea_abundance
+[1] 0
+
+[[9]]$pdo_winter_mean
+[1] 0
+`
+so excluding any age 4. Should still be able to give a prediction though.
+
+Could do this, but think it's meant to be weighted. Have to dig into the code:
+```{r mean}
+mean(mve_full$response_predicted_from_each_top_subset[prediction_year_index,],
+     na.rm = TRUE)
+```
+Plus there are lots of NA's in earlier predictions also, so need to figure that out.
+
+Look into how it picks the top embeddings.
