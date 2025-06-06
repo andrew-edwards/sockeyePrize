@@ -47,12 +47,12 @@ total_raw <- read.csv(paste0(data_dir,
   tibble::as_tibble()
 
 np_salmon <- mutate(total_raw,
-                    return_year = Return.Year,
+                    return_year_of_np_salmon = Return.Year,
                     pink = Pink,
                     chum = Chum,
                     sockeye = Sockeye,
                     total = Total) %>%
-  select(return_year,
+  select(return_year_of_np_salmon,
          pink,
          chum,
          sockeye,
@@ -60,10 +60,13 @@ np_salmon <- mutate(total_raw,
 
 np_salmon
 
+tail(np_salmon)
+
 summary(np_salmon)
 ```
 
 Save data in package:
 ```{r, savedata}
-usethis::use_data(np_salmon)
+usethis::use_data(np_salmon,
+                  overwrite = TRUE)
 ```

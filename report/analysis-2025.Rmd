@@ -24,12 +24,15 @@ knitr::opts_chunk$set(
 rmarkdown::render("analysis-2025.Rmd")
 ```
 
-```{r, packages, echo = FALSE}
-library(dplyr)
+```{r, packages, echo = FALSE, cache = FALSE}
 load_all()
-# remotes::install_github("pbs-assess/pbsEDM")
+# Or:
+# remotes::install_github("andrew-edwards/sockeyePrize")
+# library(sockeyePrize)
+library(dplyr)
 library(pbsEDM)
 library(pacea)    # make sure to update
+library(gridExtra)
 ```
 
 # Data
@@ -74,7 +77,7 @@ one_brood$Total_Recruits[7]
 
 If spawned in Sept/Oct 2013 (BroodYear), go to sea summer 2014. Then
 `AgeClass_0.3` is spawners that spent 0 winters (ignore them being eggs) in
-freshwater and three winters in ocean. So they come back to themselves in 2017,
+freshwater and three winters in ocean. So they come back to freshwater in 2017,
 as age 4. Add together the numbers and add 1 to get the age. Recruits looks to
 be the sum of the ageClass columns.
 
@@ -160,14 +163,25 @@ Try to predict:
 
 Do each seperately and then give the sum as the total prediction.
 
-Covariates would be:
+So, age4 returns in 2021:
 
-- at-sea total abundances two years prior (2019) to the return year for age4.
+ 2017: spawned in freshwater as age0, though think it's the winter, so could be
+ early 2018
+ 2018: stay in freshwater as age1
+ 2019: outmigration to ocean as age2
+ 2020: at-sea as age3
+ 2021: return as age4
 
-- at-sea total abundances average of two years ago and three years (2018 and 2019) ago prior to
-  the return year for age5 for Chilko, for others just do three years ago (2018).
+Covariates would be (D = Done, or not needed):
 
-- PDO in the winter (Nov 2018 to Mar 2019) preceding outmigration for age4.
+D Not needed: at-sea total abundances two years prior (2019) to the return year for age4
+  [think this was when we thought at-sea was juveniles; likely not needed now]
+
+D Not needed: at-sea total abundances average of two years ago and three years (2018 and 2019) ago prior to
+  the return year for age5 for Chilko, for others just do three years ago
+  (2018). [ditto]
+
+D PDO in the winter (Nov 2018 to Mar 2019) preceding outmigration for age4.
 
 - PDO in the winter (average of Nov 2017 to Mar 2018 and Nov 2018 to Mar 2019)
   preceding outmigration for age5 for Chilko.
@@ -177,21 +191,24 @@ Covariates would be:
 
 - Temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood
   Knolls" (Apr-Jul average), "Halibut Bank" (Apr-Jun average). Year of
-  outmigration, after the PDO Mar calculation.
+  outmigration, after the PDO Mar calculation, so 2019 for 2021 return year.
 
 - peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
   (same as buoy temperatures). Try Chris's code.
 
 - total pink salmon abundance in N Pacific. Second or third years of marine
-  life (as competition). Year after the temperature data (second year).
-  W: Carrie contacting Hannah Hunter. `np_salmon` has `return_year`, can use no
-  lag (though might have to).
+  life of the sockeye (as competition). Year after the temperature data (second
+  year), 2020.
+  W: Carrie contacting Hannah Hunter. `np_salmon` has
+  `return_year_of_np_salmon`.
 
-- total salmon abundance in N Pacific. Same as pink.
+
+- total salmon abundance in N Pacific. Same as pink. Andy: though won't the
+  non-pinks be out there for longer so we should look at multiple years?
 
 - copepods the year of outmigration (same as SST). Total biomass anomaly.
 
-- bifurcation index, year of outmigration.
+- bifurcation index, year of outmigration (same as SST).
 
 # Bristol Bay
 
@@ -267,7 +284,9 @@ Covariates would be:
 
 - PDO in the year prior to outmigration (Nov 2017-March 2018) for returning AgeClass_1.3.
 
-- As for Fraser River, temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood Knolls" (Apr-Jul average), "Halibut Bank" (Apr-Jun average). Year of outmigration, after the PDO Mar calculation.
+- As for Fraser River, temperature from buoys: "Halibut Bank" (Apr-Jun average),
+  "West Sea Otter" (Apr-Jul average), "East Dellwood Knolls" (Apr-Jul average),
+  Year of outmigration, after the PDO Mar calculation.
 
 - from "total_np_salmon.csv", total pink salmon abundance in N Pacific returning the same return year as being predicted (2021), to predict AgeClass 1.1, AgeClass_1.2 and AgeClass_2.2 returns (noting pink salmon might not compete with AgeClass_1.1)
 
@@ -281,92 +300,15 @@ Covariates would be:
 
 - bifurcation index, year of outmigration.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Analysis for Fraser River
+# Analysis for Fraser River Chilko
 
 Gradually construct `input_age4` tibble to go into pbsEDM, based on ideas above. `return_year` is the year that
 the age4's return to freshwater, and other variables will be time-shifted such
 that we expect the influence to correspond to `return_year`; i.e. 2021
 represents the influence on returns in 2021, but the PDO column represent PDO from a few
 years earlier.
+
+## Age4 returns
 
 ```{r inputage4}
 river <- "Chilko"
@@ -377,7 +319,25 @@ input_age4 <- select(one_returns_age45,      # only for Chilko
   filter(return_year != 1951)       # since age4 is 0 for 1951.
 input_age4 <- rbind(input_age4,
                     c(max(input_age4$return_year) + 1, NA))  # Add forecast year
+input_age4
+input_age4 %>% tail()
 
+prediction_year_index <- nrow(input_age4)
+prediction_year_index
+expect_equal(pull(input_age4[prediction_year_index, "return_year"] ),
+             2025)
+```
+
+## At sea abundances (not needed now)
+
+Think we don't need. Turns out (via Gottfried) these are just return numbers
+lined up by ocean entry year. So values are included elsewhere (though he
+couldn't get Bristol Bay to match up). He's also working out some 0 v NA
+issues.
+
+Keeping code here but not running or showing it, as don't need `at_sea_abundance`.
+
+```{r inputage4a, eval = FALSE, echo = FALSE}
 at_sea <- filter(at_sea_all,
                  River == river) %>%
   select(marine_entry_year = MarineEntryYear,
@@ -401,8 +361,12 @@ input_age4
 input_age4 %>% tail()
 ```
 
-Now for PDO. Bit fiddly to group Nov to Mar, doing a quick kludge here but
-should generalise in a function and add some checks. TODO
+### PDO in winter.
+
+PDO in the winter (Nov 2018 to Mar 2019) preceding outmigration for age4.
+
+Bit fiddly to group Nov to Mar, doing a quick kludge here but
+should generalise in a function and add some checks. TODO at some point.
 
 ```{r pdo}
 winter_months <- c(1, 2, 3, 11, 12)
@@ -416,7 +380,8 @@ pdo_winter_months
 
 pdo_winter <- summarise(group_by(pdo_winter_months,
                                  winter_group),
-                        return_year = max(year) + 2,
+                        return_year = max(year) + 2,     # fish returning 2
+                                        # years later
                         pdo_winter_mean = mean(anomaly)) %>%
   select(-c("winter_group"))
 
@@ -426,14 +391,348 @@ input_age4 <- left_join(input_age4, pdo_winter)
 
 input_age4
 input_age4 %>% tail()
-
-prediction_year_index <- nrow(input_age4)
-prediction_year_index
-expect_equal(pull(input_age4[prediction_year_index, "return_year"] ),
-             2025)
 ```
 
-## Quick EDM, no covariates
+### Buoy temperatures
+
+- Temperature from buoys: "Halibut Bank" (Apr-Jun average), "West Sea Otter" (Apr-Jul average), "East Dellwood Knolls" (Apr-Jul average). Year of
+ outmigration, after the PDO Mar calculation.
+
+Adapting from the pacea buoys vignette:
+
+```{r buoys}
+buoy_names <- c("Halibut Bank",
+                "West Sea Otter",
+                "East Dellwood Knolls") # This is their order in the data it seems
+
+buoys <- filter(buoy_metadata,
+                name %in% buoy_names)
+buoys   # shows we have SST for quite different depths
+
+buoy_temps <- filter(buoy_sst,
+                     stn_id %in% buoys$stn_id)
+
+buoy_ranges <- buoy_temps %>%
+  group_by(stn_id) %>%
+  summarise(start = min(date),
+            end = max(date))
+buoy_ranges   # looks good
+```
+
+### Buoy 1
+
+Do each buoy separately, since slightly different time spans, and need to
+manually check data.
+```{r buoys1}
+i_buoy <- 1
+id <- buoy_ranges$stn_id[i_buoy]
+id
+filter(buoy_metadata, stn_id == id)$name
+
+buoy_sst_1 <- filter(buoy_sst,
+                     stn_id == id,
+                     lubridate::month(date) %in% c(4, 5, 6))  # Apr-Jun
+
+plot(buoy_sst_1,
+     stn_id = id)
+```
+
+That figure doesn't show any obvious outliers that need looking into.
+
+```{r buoys1a}
+plot(buoy_sst_1$date,
+     buoy_sst_1$sst)
+```
+That does show 2023 looks a bit odd, maybe short on data:
+```{r buoys1b}
+plot(buoy_sst_1,
+     stn_id = id,
+     year_highlight = 2023)
+```
+As suggested, not a complete time series so need to exclude.
+
+Look more systematically, first removing the rows with NA's.
+
+```{r buoys1c}
+buoy_sst_1 <- filter(buoy_sst_1,
+                     !is.na(sst))
+
+buoy_sst_1_mean <- summarise(group_by(buoy_sst_1,
+                                      year = lubridate::year(date)),
+                             num_days = n(),
+                             sst_average = mean(sst))
+buoy_sst_1_mean %>% a()
+sort(buoy_sst_1_mean$num_days)
+```
+So there should be maximum of 91 days of SST from Apr-Jun. Need to check if
+missing values are random or systematic.
+
+```{r buoys1d}
+buoy_sst_1_mean %>% a()
+sort(buoy_sst_1_mean$num_days)
+```
+
+Agh, 2023 is the year we will need, and that's problematic for this buoy. So
+maybe look for another nearby buoy. Could look how well correlated this one is
+to other close ones. TODO.
+
+But first try the second of our originally planned buoys.
+
+### Buoy 2
+
+Do each buoy separately, since slightly different time spans, and need to
+manually check data.
+```{r buoys2}
+i_buoy <- 2
+id <- buoy_ranges$stn_id[i_buoy]
+id
+filter(buoy_metadata, stn_id == id)$name
+
+buoy_sst_2 <- filter(buoy_sst,
+                     stn_id == id,
+                     lubridate::month(date) %in% c(4, 5, 6, 7))  # Apr-Jul
+
+plot(buoy_sst_2,
+     stn_id = id)
+```
+
+That figure doesn't show any obvious outliers that need looking into, except
+maybe that one in the middle. TODO see if the following highlights it.
+
+```{r buoys2a}
+plot(buoy_sst_2$date,
+     buoy_sst_2$sst)
+```
+That does show 2013 missing, 1994 short on data probably:
+```{r buoys2b}
+plot(buoy_sst_2,
+     stn_id = id,
+     year_highlight = 1994)
+```
+As suggested, not a complete time series so need to exclude.
+
+Look more systematically, first removing the rows with NA's for this, but need
+to keep them in for the plotting.
+
+```{r buoys2c}
+buoy_sst_2_mean <- summarise(group_by(filter(buoy_sst_2,
+                                             !is.na(sst)),
+                                      year = lubridate::year(date)),
+                             num_days = n(),
+                             sst_average = mean(sst))
+buoy_sst_2_mean %>% a()
+sort(buoy_sst_2_mean$num_days)
+```
+So there should be maximum of 122 days of SST from Apr-Jun. Need to check if
+missing values are random or systematic.
+
+```{r buoys2d}
+buoy_sst_2_mean %>% a()
+sort(buoy_sst_2_mean$num_days)
+
+plot(buoy_sst_2_mean$year,
+     buoy_sst_2_mean$sst_average,
+     type = "o",
+     main = "Before removing low counts")
+```
+
+Think just have to look at potentially problematic years in turn. Making plots
+in groups of 8 years, then after list the ones to keep/exclude.
+
+```{r buoys2e}
+# par(mfrow = c(8, 4))   # Don't need to do 2025
+buoy_sst_2_plots <- list()
+for(i_year in 1:32){
+  year_val <- buoy_sst_2_mean$year[i_year]
+  # buoy_sst_2_plot_names[[i_year]] <- paste0("buoy_sst_2_plot_",
+  #                                        year_val)
+  #assign(paste0("buoy_sst_2_plot_",
+  #              year_val),
+  buoy_sst_2_plots[[i_year]] <-
+    plot(buoy_sst_2,
+         stn_id = id,
+         years = year_val,
+         year_highlight = NA, #year_val,
+         title = year_val)
+  # %>% ggplot2::ggplotGrob()
+}
+
+plt <- cowplot::plot_grid(plotlist = buoy_sst_2_plots[1:8],
+                   ncol = 2,
+                   nrow = 4)
+```
+
+```{r buoys2ebigplot, fig.width = 8, fig.height = 10}
+plt
+# If want to add global axis labels:
+#y_grob <- textGrob("Depth (m)",
+#                     gp = gpar(fontsize = label_size),
+#                     rot = 90)
+#  x_grob <- textGrob("Year",
+#                     gp = gpar(fontsize = label_size),
+#                     vjust = -0.5)
+# grid.arrange(arrangeGrob(plt)) # , left = y_grob, bottom = x_grob))
+```
+
+```{r buoys2ebigplot2, fig.width = 8, fig.height = 10}
+cowplot::plot_grid(plotlist = buoy_sst_2_plots[9:16],
+                   ncol = 2,
+                   nrow = 4)
+```
+
+```{r buoys2ebigplot3, fig.width = 8, fig.height = 10}
+cowplot::plot_grid(plotlist = buoy_sst_2_plots[17:24],
+                   ncol = 2,
+                   nrow = 4)
+```
+
+```{r buoys2ebigplot4, fig.width = 8, fig.height = 10}
+cowplot::plot_grid(plotlist = buoy_sst_2_plots[25:32],
+                   ncol = 2,
+                   nrow = 4)
+```
+
+Now document the years to keep for this buoy. Just visually look at figures and
+keep those without any 'large gaps' in one
+area; or rather, small gaps are okay if they are spread out. Quick for now, a
+little subjective, can make more explicitly later if needed.
+```{r buoys2keep}
+buoy_sst_2_years_to_keep <- c(1991,
+                              1996,
+                              1999,
+                              2000,
+                              2002:2018,
+                              2020:2021,
+                              2023)
+
+buoy_sst_2_mean_keep <- filter(buoy_sst_2_mean,
+                               year %in% buoy_sst_2_years_to_keep)
+buoy_sst_2_mean_not_keep <- filter(buoy_sst_2_mean,
+                                   !(year %in% buoy_sst_2_years_to_keep))
+
+# Keeping these:
+buoy_sst_2_mean_keep %>% a()
+
+# Not keeping these:
+buoy_sst_2_mean_not_keep %>% a()
+
+plot(buoy_sst_2_mean$year,
+     buoy_sst_2_mean$sst_average,
+     type = "o",
+     main = "Black - all; red - years keeping")
+
+points(buoy_sst_2_mean_keep$year,
+       buoy_sst_2_mean_keep$sst_average,
+       type = "o",
+       col = "red")
+```
+Shows that you can't simply just have a cut off based on `num_days`.
+
+To add to the EDM input file:
+```{r buoy2keep}
+buoy_sst_2_mean_keep
+
+buoy_sst_2_mean_input <-
+  rename(buoy_sst_2_mean_keep,
+         buoy_sst_2 = sst_average) %>%
+  mutate(return_year = year + 2)
+
+buoy_sst_2_mean_input
+tail(buoy_sst_2_mean_input)
+
+input_age4 <- left_join(input_age4,
+                        select(buoy_sst_2_mean_input,
+                               c("return_year", "buoy_sst_2")))
+
+input_age4
+input_age4 %>% tail()
+```
+
+
+\clearpage
+
+### Fraser River Discharge
+
+- peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
+  (same as buoy temperatures). Try Chris's code.
+
+### Total Pink Salmon abundance in North Pacific
+
+- total pink salmon abundance in N Pacific. Second or third years of marine
+  life of the sockeye (as competition). Year after the temperature data (second
+  year), so 2020 (for age4 returning in 2021).
+
+  So the Pinks that are in the
+  ocean in 2020.
+  `np_salmon` has `return_year_of_np_salmon`. So we would want the
+  `return_year_of_np_salmon` to be 2021, as those will be in the ocean in 2020.
+  BUT, that implies `return_year = 2025` sockeye (what we want to predict), we will need the
+  pinks at sea that are also returning in 2025, which we won't have.
+  [Carrie contacting Hannah Hunter also].
+
+The Pink Salmon only spend one year at sea. Think we want the Pink Salmon that return in
+
+```{r npsalmon}
+tail(np_salmon)
+```
+
+### Total salmon abundance in N Pacific
+
+- total salmon abundance in N Pacific. Same as pink. Andy: though won't the
+  non-pinks be out there for longer so we should look at multiple years?
+
+### Copepods the year of outmigration
+
+Total biomass anomaly in SoG from pacea (same year as SST). So for 2021 returns we use 2019, so for
+2025 we need 2023, which we do have.
+
+```{r zooplankton}
+zooplankton_sog
+
+zoo <- select(zooplankton_sog,
+              year,
+              total_biomass) %>%
+  rename(zoo_total_biomass = total_biomass) %>%
+  mutate(return_year = year + 2)
+zoo
+tail(zoo)
+
+input_age4 <- left_join(input_age4,
+                        select(zoo,
+                               -"year"))
+
+input_age4
+input_age4 %>% tail()
+```
+
+### Bifurcation index the year of outmigration
+
+Bifurcation index, year of outmigration, same year as SST (so same as zooplankton).
+So, again, for 2021 returns we use 2019, so for 2025 we need 2023, which we do have.
+
+```{r bi}
+bi
+bi %>% tail()
+
+bi_input <- select(bi,
+                   year,
+                   anomaly) %>%
+  rename(bi_anomaly = anomaly) %>%
+  mutate(return_year = year + 2)
+bi_input
+tail(bi_input)
+
+input_age4 <- left_join(input_age4,
+                        select(bi_input,
+                               -"year"))
+
+input_age4
+input_age4 %>% tail()
+```
+
+
+
+## Quick EDM, no covariates (text of later sections based on old inputs, needs updating)
 
 Do a quick pbsEDM as proof of concept and to see what we get. Then go back to
 previous section to carry on.
