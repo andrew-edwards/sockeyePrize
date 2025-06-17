@@ -31,9 +31,19 @@ load_all()
 
 From Brendan (30/4/25 email to Carrie):
 
-"The attached are the most up to date data and best citation would be: Connors, B., Ruggerone, G.T. and Irvine, J.R., 2025. Adapting management of Pacific salmon to a warming and more crowded ocean. ICES Journal of Marine Science, 82(1), p.fsae135.
+"The attached are the most up to date data and best citation would be: Connors, B., Ruggerone, G.T. and Irvine, J.R., 2025. Adapting management of Pacific salmon to a warming and more crowded ocean. ICES Journal of Marine Science, 82(1), p.fsae135."
 
-If you need 2024 returns I could probably work with Greg later in May to compile. "
+From the spreadsheet:
+
+"data through 2015 taken from Ruggerone, G.T. and Irvine, J.R., 2018. Numbers
+and biomass of natural and hatchery origin pink salmon, chum salmon, and sockeye
+salmon in the North Pacific Ocean, 1925-2015. Marine and Coastal Fisheries,
+10(2), pp.152-168. "
+
+2016-2023 updated using same methods.
+
+2024: crude estimate of pinks; 5 year average for chum and sockeye (presumably
+would want to update for a formal paper, this is fine for our purposes).
 
 # Data loading
 
@@ -43,7 +53,7 @@ data_dir <- paste0(here::here(),
                    "/data-raw/")
 
 total_raw <- read.csv(paste0(data_dir,
-                                 "total_np_salmon.csv")) %>%
+                                 "total_np_salmon.2024_update.csv")) %>%
   tibble::as_tibble()
 
 np_salmon <- mutate(total_raw,
