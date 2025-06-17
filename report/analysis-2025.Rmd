@@ -37,17 +37,18 @@ library(gridExtra)
 
 Next:
 
- D understand E definition, regarding univariate - yes, $E = 5$ is a lag of 4,
+  D understand E definition, regarding univariate - yes, $E = 5$ is a lag of 4,
    since it counts the lag of 0.
- - check the other SST buoys, just replace 1 and 3 in this analysis since
+
+  - check the other SST buoys, just replace 1 and 3 in this analysis since
    didn't work.
- - do Fraser River discharge
- - look at multiview embedding code, might want something similar to loop
+  - do Fraser River discharge
+  - look at multiview embedding code, might want something similar to loop
    through the multivariate EDM, in terms of trying the different lags. And
    could try multiview also.
 
- - waiting for NP salmon
- - see other TODO's here.
+  - waiting for NP salmon
+  - see other TODO's here.
 
 # Data
 
