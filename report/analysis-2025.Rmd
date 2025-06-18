@@ -766,23 +766,33 @@ plot(res_univariate[[4]]$N_observed,
      res_univariate[[4]]$N_forecast)
 ```
 
-and indeed, `N_rho$ is only `r round(res_univariate[[4]]$results$N_rho, 2)` as seen above.
+and indeed, `N_rho$ is only `r round(res_univariate[[4]]$results$N_rho, 2)` as
+seen in results above.
+
+Checking the $X$:
+```{r obsX}
+plot(res_univariate[[4]]$X_observed,
+     res_univariate[[4]]$X_forecast)
+```
+
+and indeed, `X_rho$ is only `r round(res_univariate[[4]]$results$X_rho, 2)` as
+seen in the panel plot above.
 
 
 ## EDM with covariates
 
-Do a time series panel plot first of all time series.
+- Do a time series panel plot first of all time series.
 
-Then do the correlation plot first before truncating (expect it just ignores NA's),
+- Then do the correlation plot first before truncating (expect it just ignores NA's),
 and add in the correlation coefficient option.
 
-Now try some covariates, need to understand what is going on here. Lots of
+- Now try some covariates, need to understand what is going on here. Lots of
 options though. See multiview embedding also (maybe).
 
-Don't need lags on covariates as we've already shifted them to correspond with
+- Don't need lags on covariates as we've already shifted them to correspond with
 `return_year` and we have reasons for including them.
 
-But the method doesn't deal with NA's, and when keeping them in and doing the
+- But the method doesn't deal with NA's, and when keeping them in and doing the
 full time series (starting from 1952) seems to just end up with a few years that
 work; this was from doing chunk edm1 before removing NA's, which we're doing
 here now.
@@ -791,6 +801,42 @@ here now.
 input_age4
 summary(input_age4)
 ```
+
+Do a big plot of everything:
+```{r plotcovariates}
+to_plot <- tidyr::pivot_longer(input_age4,
+                               cols = -return_year) %>%
+  mutate(name = factor(name))
+
+p <- ggplot(to_plot,
+            aes(return_year, value)) +
+  geom_line() +
+  facet_wrap(~name, scales = "free_y")
+
+p
+
+# It reorders them alphabetically; need something like this:
+#  mutate(name = factor(name, levels = paste0("X", 1:12))) %>%
+```
+
+Just do correlation plot:
+```{r corrplot}
+# pairs(input_age4,
+#      lower.panel = panel.cor)
+
+GGally::ggpairs(input_age4)
+```
+
+HERE
+
+
+
+
+
+
+
+
+
 So PDO is okay, need to look into others:
 ```{r age4rmNA2}
 input_age4$sst_spring
