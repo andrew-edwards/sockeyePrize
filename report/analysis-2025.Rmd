@@ -6,7 +6,7 @@ fontsize: 12pt
 date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 ---
 
-```{r, setup, include = FALSE}
+```{r, setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "",
@@ -17,6 +17,8 @@ knitr::opts_chunk$set(
   fig.height = 6
 )
   # comment = "#>",
+# knitr::dep_auto(path = "analysis-2025-cache/")
+knitr::dep_prev()
 ```
 
 ```{r, build, echo = FALSE, eval = FALSE}
@@ -187,9 +189,13 @@ So, age4 returns in 2021:
 
  2017: spawned in freshwater as age0, though think it's the winter, so could be
  early 2018
+
  2018: stay in freshwater as age1
+
  2019: outmigration to ocean as age2
+
  2020: at-sea as age3
+
  2021: return as age4
 
 We assumed mostly 1.X, meaning they do 1 year in freshwater (think we looked at
@@ -226,15 +232,16 @@ D Temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood
   (same as buoy temperatures). Try Chris's code. TODO definitely worth doing,
   and also needed for SoG ecosystem summary.
 
-D total pink salmon abundance in N Pacific. Second or third years of marine
+- total pink salmon abundance in N Pacific. Second or third years of marine
   life of the sockeye (as competition). Year after the temperature data (second
   year), 2020.  `np_salmon` has `return_year_of_np_salmon`
   Carrie contacting Hannah Hunter -- think that informed Carrie's notes for the
   other two river systems below (even if it didn't, that's what we'll
-  use). Brendan has sent us 2024, now in this package.
+  use). Brendan has sent us 2024, now in this package. See section below.
 
-D total salmon abundance in N Pacific. Same as pink. Andy: though won't the
-  non-pinks be out there for longer so we should look at multiple years?
+- total salmon abundance in N Pacific. Same as pink. Andy: though won't the
+  non-pinks be out there for longer so we should look at multiple years? And
+  don't think the years match up, see section below.
 
 D copepods the year of outmigration (same as SST). Total biomass anomaly.
 
@@ -539,24 +546,57 @@ input_age4 %>% tail()
   life of the sockeye (as competition). Year after the temperature data (second
   year), so 2020 (for age4 returning in 2021).
 
-  So the Pinks that are in the
-  ocean in 2020.
+  So the Pinks that are in the ocean in 2020.
   `np_salmon` has `return_year_of_np_salmon`. So we would want the
   `return_year_of_np_salmon` to be 2021, as those will be in the ocean in 2020.
   BUT, that implies `return_year = 2025` sockeye (what we want to predict), we will need the
   pinks at sea that are also returning in 2025, which we won't have.
   [Carrie contacting Hannah Hunter also].
 
-The Pink Salmon only spend one year at sea. Think we want the Pink Salmon that return in
+The Pink Salmon only spend one year at sea. So can look at pinks returning in
+2020 as interacting at sea in 2019 with the age4 Sockeye returning in 2021, when
+the latter are age2. Ideally would want the pinks returning in 2021, but then to
+predict Sockeye returning in 2025 we would need info on pinks returning in 2025,
+which we do not have:
 
 ```{r npsalmon}
+np_salmon
+
 tail(np_salmon)
+
+max(diff(np_salmon$return_year_of_np_salmon))   # No gaps
+sum(is.na(np_salmon$total))                     # No missing values
+```
+Does start in 1925, which is nice. And fully continuous.
+
+Adapting OISST code above, we just want to add on the pinks and the total
+salmon, which Brendan has already calculated, so do them together. Need to shift
+by a year to get return year (of age4 Sockeye).
+
+```{r, npsalmon2}
+np_salmon_shifted <- mutate(np_salmon,
+                            return_year = return_year_of_np_salmon + 1)
+
+np_salmon_shifted %>% tail()
+
+input_age4 <- left_join(input_age4,
+                        np_salmon_shifted) %>%
+  select(-c("return_year_of_np_salmon",
+            "chum",
+            "sockeye"))
+
+input_age4
+input_age4 %>% tail()
 ```
 
 ### Total salmon abundance in N Pacific
 
 - total salmon abundance in N Pacific. Same as pink. Andy: though won't the
-  non-pinks be out there for longer so we should look at multiple years?
+  non-pinks be out there for longer so we should look at multiple years? Could
+  do but will get complicated and have limited time, could always include lags
+  in EDM analysis.
+
+Done in previous section in the same way, for simplicity.
 
 ### Copepods the year of outmigration
 
@@ -647,7 +687,9 @@ and indeed, `N_rho$ is only `r round(res_univariate[[4]]$results$N_rho, 2)` as s
 
 ## EDM with covariates
 
-Do the correlation plot first before truncating (expect it just ignores NA's),
+Do a time series panel plot first of all time series.
+
+Then do the correlation plot first before truncating (expect it just ignores NA's),
 and add in the correlation coefficient option.
 
 Now try some covariates, need to understand what is going on here. Lots of
