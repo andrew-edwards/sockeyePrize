@@ -33,6 +33,7 @@ library(dplyr)
 library(pbsEDM)
 library(pacea)    # make sure to update
 library(gridExtra)
+library(ggplot2)
 ```
 
 Next:
@@ -40,14 +41,17 @@ Next:
   D understand E definition, regarding univariate - yes, $E = 5$ is a lag of 4,
    since it counts the lag of 0.
 
-  - use OISST instead of buoy temperatures; moved buoy code to
+  D use OISST instead of buoy temperatures; moved buoy code to
     `analysis-2025-buoy-sst-not-needed.Rmd` out of the way.
-  - do Fraser River discharge
+
+  - add in updated NP Salmon, already in package.
+  - do Fraser River discharge as is important.
+  - do correlation plot at start of EDM with covariates section
   - look at multiview embedding code, might want something similar to loop
    through the multivariate EDM, in terms of trying the different lags. Use
    Luke's function for generating the lags (I think that's the way to go).
   - And could maybe try multiview also but less polished in the code.
-  - add in updated NP Salmon, already in package.
+
 
   - see other TODO's here.
 
@@ -209,12 +213,14 @@ D PDO in the winter (Nov 2018 to Mar 2019) preceding outmigration for age4.
 - PDO in the winter (Nov 2017 to Mar 2018) preceding outmigration for other
   age5's.
 
-- Temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood
+D Temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood
   Knolls" (Apr-Jul average), "Halibut Bank" (Apr-Jun average). Year of
   outmigration, after the PDO Mar calculation, so 2019 for 2021 return year.
-  TODO these haven't worked great, so try the other buoys in SoG, now that I
-  have the code done to look at fairly easily. Could just change the names and
-  rerun, give we know two of them aren't useful.
+  had thought: these haven't worked great, so try the other buoys in SoG, now that I
+  have the code done to look at fairly easily. But now doing OISST.
+
+- OISST - could either use Apr-Jul average for an area, or just pick the pixel
+  closest to Halibut Bank buoy, which I think was our first choice.
 
 - peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
   (same as buoy temperatures). Try Chris's code. TODO definitely worth doing,
@@ -378,7 +384,8 @@ at_sea %>% tail()    # This has 2025 return_year, which we need.
 # at_sea <- filter(at_sea_abundance,
 #                           total_abundance > 0)
 
-input_age4 <- left_join(input_age4, at_sea) %>%
+input_age4 <- left_join(input_age4,
+                        at_sea) %>%
   select(-"marine_entry_year")
 
 input_age4
@@ -417,6 +424,108 @@ input_age4
 input_age4 %>% tail()
 ```
 
+
+### Temperature -- from OISST
+
+
+- OISST - could either use Apr-Jul average for an area, or just pick the pixel
+  closest to Halibut Bank buoy, which I think was our first choice.
+
+Just try pixel closest to Halibut Bank buoy, as can adapt code from Travis's vignette
+  (and maybe functionalise it later).
+
+From Travis's oisst.Rmd:
+
+```{r}
+lat <- buoy_metadata$latitude[which(buoy_metadata$name == "Halibut Bank")]
+lon <- buoy_metadata$longitude[which(buoy_metadata$name == "Halibut Bank")]
+
+# create a dataframe and convert to sf object
+coords_halibut_bank <- data.frame(x = lon, y = lat)
+sf_halibut_bank <- sf::st_as_sf(coords_halibut_bank,
+                                coords = c("x", "y"),
+                                crs = "EPSG: 4326")
+sf_halibut_bank
+
+# distance from buoy to each coordinate
+dist <- sf::st_distance(oisst_month, sf_halibut_bank)
+
+# subset data for points that are closest to buoy
+sub.dat <- oisst_month[which(dist == min(dist)),]
+
+sub.dat    # geometry is just the same point repeated I think
+```
+
+Now we can plot the time series for the data we've extracted
+
+```{r, oisstallyears}
+sub.dat %>%
+  mutate(year = as.factor(year)) %>%  # set year to a factor so each line is plotted separately
+  ggplot() +
+  geom_line(aes(x = month, y = sst, col = year)) +
+  scale_y_continuous(name = attributes(oisst_month)$units)
+```
+
+To see where we are this year, let's plot just this year's data, with the
+historical distribution (not evaluating).
+
+```{r, oisstoneyear, eval = FALSE, echo = FALSE}
+# calculate summary statistics (median, sd, 0.05 and 0.95 probabilities)
+sum.dat <- sub.dat %>%
+  group_by(month) %>%
+  summarise(median_val = median(sst, na.rm = TRUE),
+            sd_val = sd(sst, na.rm = TRUE),
+            q05 = quantile(sst, probs = 0.05, na.rm = TRUE),
+            q95 = quantile(sst, probs = 0.95, na.rm = TRUE))
+
+sub.dat %>%
+  filter(year == 2023) %>%
+  mutate(year = as.factor(year)) %>%
+  ggplot() +
+  geom_ribbon(data = sum.dat, aes(x = month, ymin = q05, ymax = q95), fill = "grey") +
+  geom_line(aes(x = month, y = sst), col = "red") +
+  geom_line(data = sum.dat, aes(x = month, y = median_val), col = "black", linewidth = 1) +
+  scale_y_continuous(name = attributes(oisst_month)$units)
+```
+
+Now to extract what we need, is the annual average over Apr-Jul for each
+year. Adapting from PDO code above:
+
+```{r, oisstavge}
+spring_months <- 4:7
+halibut_bank_spring_months <- dplyr::filter(sub.dat, month %in% spring_months)
+
+# Check the number of samples in each month:
+min(halibut_bank_spring_months$sst_n)     # 30, great.
+
+# Check first year has all four months (i.e. starts in April);
+halibut_bank_spring_months    # Yes it does
+
+halibut_bank_spring <- summarise(group_by(halibut_bank_spring_months,
+                                          year),
+                        return_year = max(year) + 2,     # fish returning 2
+                                                         # years later
+                        spring_sst = mean(sst)) %>%
+  sf::st_drop_geometry()
+
+halibut_bank_spring
+
+halibut_bank_spring %>% tail()
+
+plot(halibut_bank_spring$year,
+     halibut_bank_spring$spring_sst,
+     type = "o",
+     xlab = "Spring SST",
+     ylab = "Year")
+
+input_age4 <- left_join(input_age4,
+                        halibut_bank_spring) %>%
+  select(-"year")
+
+
+input_age4
+input_age4 %>% tail()
+```
 
 
 ### Fraser River Discharge
@@ -538,6 +647,9 @@ and indeed, `N_rho$ is only `r round(res_univariate[[4]]$results$N_rho, 2)` as s
 
 ## EDM with covariates
 
+Do the correlation plot first before truncating (expect it just ignores NA's),
+and add in the correlation coefficient option.
+
 Now try some covariates, need to understand what is going on here. Lots of
 options though. See multiview embedding also (maybe).
 
@@ -553,10 +665,9 @@ here now.
 input_age4
 summary(input_age4)
 ```
-So PDO is okay, need to look into others. SST will be tricky, as the others are
-continuous once they get started.
+So PDO is okay, need to look into others:
 ```{r age4rmNA2}
-input_age4$buoy_sst_otter
+input_age4$spring_sst
 
 input_age4$zoo_total_biomass
 
