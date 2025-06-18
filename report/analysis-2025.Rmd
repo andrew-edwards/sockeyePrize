@@ -46,8 +46,8 @@ Next:
   D use OISST instead of buoy temperatures; moved buoy code to
     `analysis-2025-buoy-sst-not-needed.Rmd` out of the way.
 
-  - add in updated NP Salmon, already in package.
-  - do Fraser River discharge as is important.
+  D add in updated NP Salmon, already in package.
+  D do Fraser River discharge as is important.
   - do correlation plot at start of EDM with covariates section
   - look at multiview embedding code, might want something similar to loop
    through the multivariate EDM, in terms of trying the different lags. Use
@@ -225,21 +225,21 @@ D Temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood
   had thought: these haven't worked great, so try the other buoys in SoG, now that I
   have the code done to look at fairly easily. But now doing OISST.
 
-- OISST - could either use Apr-Jul average for an area, or just pick the pixel
+D OISST - could either use Apr-Jul average for an area, or just pick the pixel
   closest to Halibut Bank buoy, which I think was our first choice.
 
-- peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
+D peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
   (same as buoy temperatures). Try Chris's code. TODO definitely worth doing,
   and also needed for SoG ecosystem summary.
 
-- total pink salmon abundance in N Pacific. Second or third years of marine
+D total pink salmon abundance in N Pacific. Second or third years of marine
   life of the sockeye (as competition). Year after the temperature data (second
   year), 2020.  `np_salmon` has `return_year_of_np_salmon`
   Carrie contacting Hannah Hunter -- think that informed Carrie's notes for the
   other two river systems below (even if it didn't, that's what we'll
   use). Brendan has sent us 2024, now in this package. See section below.
 
-- total salmon abundance in N Pacific. Same as pink. Andy: though won't the
+D total salmon abundance in N Pacific. Same as pink. Andy: though won't the
   non-pinks be out there for longer so we should look at multiple years? And
   don't think the years match up, see section below.
 
@@ -512,7 +512,7 @@ halibut_bank_spring <- summarise(group_by(halibut_bank_spring_months,
                                           year),
                         return_year = max(year) + 2,     # fish returning 2
                                                          # years later
-                        spring_sst = mean(sst)) %>%
+                        sst_spring = mean(sst)) %>%
   sf::st_drop_geometry()
 
 halibut_bank_spring
@@ -520,7 +520,7 @@ halibut_bank_spring
 halibut_bank_spring %>% tail()
 
 plot(halibut_bank_spring$year,
-     halibut_bank_spring$spring_sst,
+     halibut_bank_spring$sst_spring,
      type = "o",
      xlab = "Spring SST",
      ylab = "Year")
@@ -538,7 +538,91 @@ input_age4 %>% tail()
 ### Fraser River Discharge
 
 - peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
-  (same as buoy temperatures). Try Chris's code.
+  (same as buoy temperatures). Try Chris's code. Have done it for pacea, but in
+  my dev-andy branch. So just copying those .rda files into data/ here, so can
+  use.
+
+Adapting temperature code from above, this is for mean discharge in spring:
+
+```{r, fraser}
+fraser_months <- 4:6
+
+fraser_discharge_mean     # from pacea, but in this package for now
+
+fraser_mean_months <- dplyr::filter(fraser_discharge_mean,
+                                    month %in% fraser_months)
+
+# Check first year has all four months (i.e. starts in April);
+fraser_mean_months    # Yes it does
+
+fraser_mean_in_spring <- summarise(group_by(fraser_mean_months,
+                                         year),
+                        return_year = unique(year) + 2,     # fish returning 2
+                                                         # years later
+                        fraser_mean_spring = mean(value))
+
+fraser_mean_in_spring
+fraser_mean_in_spring %>% tail()
+
+plot(fraser_mean_in_spring$year,
+     fraser_mean_in_spring$fraser_mean_spring,
+     type = "o",
+     xlab = "Fraser River discharge in spring - mean",
+     ylab = "Year")
+
+# Last year is the lowest, and it was the one (2024) that I had to get
+# separately; but won't actually be needed for 2025 forecast given the shift.
+
+input_age4 <- left_join(input_age4,
+                        fraser_mean_in_spring) %>%
+  select(-"year")
+
+
+input_age4
+input_age4 %>% tail()
+```
+
+And for peak discharge, which is the peak daily value over the spring months.
+
+```{r, fraserpeak}
+fraser_discharge_peak     # from pacea, but in this package for now
+
+fraser_peak_months <- dplyr::filter(fraser_discharge_peak,
+                                    month %in% fraser_months)
+
+# Check first year has all four months (i.e. starts in April);
+fraser_peak_months    # Yes it does
+
+fraser_peak_in_spring <- summarise(group_by(fraser_peak_months,
+                                         year),
+                        return_year = unique(year) + 2,     # fish returning 2
+                                                         # years later
+                        fraser_peak_spring = max(value))
+
+fraser_peak_in_spring
+fraser_peak_in_spring %>% tail()
+
+plot(fraser_peak_in_spring$year,
+     fraser_peak_in_spring$fraser_peak_spring,
+     type = "o",
+     xlab = "Fraser River discharge in spring - peak",
+     ylab = "Year")
+
+# Last year is the lowest, and it was the one (2024) that I had to get
+# separately; but won't actually be needed for 2025 forecast given the shift.
+
+input_age4 <- left_join(input_age4,
+                        fraser_peak_in_spring) %>%
+  select(-"year")
+
+
+input_age4
+input_age4 %>% tail()
+```
+
+
+
+
 
 ### Total Pink Salmon abundance in North Pacific
 
@@ -676,7 +760,7 @@ res_univariate[[4]]$N_forecast
 res_univariate[[4]]$N_forecast[prediction_year_index]
 ```
 
-Though they the observed and forecast $N$ look quite different:
+Though the observed and forecast $N$ look quite different:
 ```{r obsN}
 plot(res_univariate[[4]]$N_observed,
      res_univariate[[4]]$N_forecast)
@@ -709,7 +793,7 @@ summary(input_age4)
 ```
 So PDO is okay, need to look into others:
 ```{r age4rmNA2}
-input_age4$spring_sst
+input_age4$sst_spring
 
 input_age4$zoo_total_biomass
 
