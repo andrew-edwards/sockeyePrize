@@ -48,7 +48,7 @@ Next:
 
   D add in updated NP Salmon, already in package.
   D do Fraser River discharge as is important.
-  - do correlation plot at start of EDM with covariates section
+  D do correlation plot at start of EDM with covariates section
   - look at multiview embedding code, might want something similar to loop
    through the multivariate EDM, in terms of trying the different lags. Use
    Luke's function for generating the lags (I think that's the way to go).
@@ -733,7 +733,7 @@ input_age4 %>% tail()
 
 
 
-## Quick EDM, no covariates (text of later sections based on old inputs, needs updating)
+# Quick EDM, no covariates (text of later sections based on old inputs, needs updating)
 
 Do a quick pbsEDM as proof of concept and to see what we get. Then go back to
 previous section to carry on.
@@ -778,8 +778,9 @@ plot(res_univariate[[4]]$X_observed,
 and indeed, `X_rho$ is only `r round(res_univariate[[4]]$results$X_rho, 2)` as
 seen in the panel plot above.
 
+\clearpage
 
-## EDM with covariates
+# EDM with covariates
 
 - Do a time series panel plot first of all time series.
 
@@ -803,15 +804,16 @@ summary(input_age4)
 ```
 
 Do a big plot of everything:
-```{r plotcovariates}
+```{r plotcovariates, fig.height = 9}
 to_plot <- tidyr::pivot_longer(input_age4,
                                cols = -return_year) %>%
   mutate(name = factor(name))
 
 p <- ggplot(to_plot,
             aes(return_year, value)) +
-  geom_line() +
-  facet_wrap(~name, scales = "free_y")
+  geom_path() +                        # leaves gaps for NA's, but none now
+  # facet_wrap(~name, scales = "free_y")
+  facet_grid(name ~ ., scales = "free_y")
 
 p
 
@@ -819,15 +821,91 @@ p
 #  mutate(name = factor(name, levels = paste0("X", 1:12))) %>%
 ```
 
-Just do correlation plot:
+That suggests, to get a long time series, let's first use the covariates that
+span the full time series.
+
+Full correlation plot (bit hard to see)
 ```{r corrplot}
 # pairs(input_age4,
 #      lower.panel = panel.cor)
-
 GGally::ggpairs(input_age4)
 ```
 
+
+## Only covariates that span the full time series
+
+Basically, which covariates have values in the first year. Then check they cover
+all years.
+
+```{r fullspan}
+cov_in_first_year <- which(!is.na(input_age4[1, ]))
+
+cov_in_first_year
+
+names(input_age4)[cov_in_first_year]
+```
+
+Pairs of those will definitely be correlated. But let's see:
+
+```{r, fullspan2}
+input_age4_full_span <- input_age4[ , cov_in_first_year]
+summary(input_age4_full_span)    # Just the one NA for final return_year of age4
+
+GGally::ggpairs(input_age4_full_span)
+```
+
+A clearer plot (coefficients are calculated slightly differently):
+```{r, fullspan3}
+(list "" '(("..." . "") ("na.rm" . "FALSE")) '("na.rm" "x" "..."))
+> corrplot::corrplot(cor(filter(input_age4_full_span, return_year < max(input_age4_full_span$return_year))),
+  method = "number",
+  type = "upper" # show only upper side
+  )
+```
+
+Can see there's barely any correlation between any covariates and age4's.
+
+In Haigh et al. (2019) we used a correlation coefficient between covaraties of
+0.3 to exclude related covariates. Let's do that here.
+
+Just looking manually at the figure, we can see that should not have, in the
+same analysis (because correlation has magnitude $>0.3$):
+
+PDO and either Fraser Discharge (unfortunate)
+
+- `pdo_winter_mean` and either `fraser_mean_spring` or `fraser_peak_spring`; the
+  latter are direct influences so should probabarly be preferred.
+
+- `fraser_mean_spring` and `fraser_peak_spring` (as expected)
+
+- `pink` and `total` (as expected)
+
+
+### Multivariate EDM for the full span values
+
+(Earlier attempts at truncated time series are saved below, and used as template).
+
+```{r edmspan1}
+res_span1 <- pbsEDM(input_age4_full_span,
+                    lags = list(age4 = c(0, 4, 5),
+                                # pdo_winter_mean = 0,
+                                fraser_mean_spring = 0,
+                                pink = 0),
+                    first_difference = TRUE,
+                    centre_and_scale = TRUE)
+ <-
+res_span1$results
+plot(res_span1, portrait = FALSE)  # technically not correct
+```
+
+Need to systematically go through the different options. Look at Luke's lag
+function.
+
 HERE
+
+
+
+
 
 
 
