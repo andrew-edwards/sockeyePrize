@@ -38,6 +38,10 @@ library(gridExtra)
 library(ggplot2)
 ```
 
+See `analysis-2025-2.Rmd` instead, which copies and then changes this. See note
+on page 77 as to why (basically need to not temporally shift covariates for the input, but
+let EDM deal with the lags).
+
 Next:
 
   D understand E definition, regarding univariate - yes, $E = 5$ is a lag of 4,
@@ -856,8 +860,7 @@ GGally::ggpairs(input_age4_full_span)
 
 A clearer plot (coefficients are calculated slightly differently):
 ```{r, fullspan3}
-(list "" '(("..." . "") ("na.rm" . "FALSE")) '("na.rm" "x" "..."))
-> corrplot::corrplot(cor(filter(input_age4_full_span, return_year < max(input_age4_full_span$return_year))),
+corrplot::corrplot(cor(filter(input_age4_full_span, return_year < max(input_age4_full_span$return_year))),
   method = "number",
   type = "upper" # show only upper side
   )
@@ -893,18 +896,111 @@ res_span1 <- pbsEDM(input_age4_full_span,
                                 pink = 0),
                     first_difference = TRUE,
                     centre_and_scale = TRUE)
- <-
+
 res_span1$results
 plot(res_span1, portrait = FALSE)  # technically not correct
 ```
 
 Need to systematically go through the different options. Look at Luke's lag
-function.
+function. Though we already have that working for multiview embedding, so let's
+just use that.
 
-HERE
+### Multiview embedding for the span values
 
+The following worked from `mve_understanding.Rmd` vignette in pbsEDM, to use as
+a template:
 
+--
 
+It's all working okay. Try shebang one again with longer simulated data and more
+lags. Though the actual top rho values shouldn't change from shebang; the values
+are calculated in the function now.
+
+```{r shebang2}
+set.seed(42)
+h_simulated <- 0.1095 + sample(1:180) * 0.001 # has mean of 0.2
+simulated_4 <- EDMsimulate::salmon_sim(h = h_simulated)
+
+lags_use_multi <- list(R_t = 0,
+                       S_t = 0:3)
+
+lags_lots <- list(R_t = 0:4,
+                  S_t = 0:8)
+
+mve_full_shebang_2 <- multiview_embedding(data = simulated_4,
+                                          response = "R_t",
+                                          lags = lags_lots)  # Do lags_use_multi
+                                            # for shorter and quicker one (instantaneous);
+                                            # lags_lots for longer, a few minutes
+mve_full_shebang_2$rho_prediction_from_mve
+mve_full_shebang_2$rho_each_top_subset
+```
+
+Wow, fascinating. The overall $\rho$ for mve, averaging over the top subsets, is
+higher than every $\rho$ from every subset! So the averaging is indeed paying
+off, and improving results. Other results are:
+
+```{r shebang2res}
+mve_full_shebang_2$lags_of_top_subsets  # These are in order of highest rho
+mve_full_shebang_2$response_predicted_from_mve   # Overall mve prediction, including
+                                            # for the forecast T+1.
+```
+
+Also, for calculating number of lag combinations to test:
+Number of 5-dimensional combinations (?) is
+```{r combinations}
+choose(10, 1:10)
+choose(10, 1:10) %>% sum()
+choose(10, 1:10) %>% sum() %>% sqrt()
+```
+So that's manageable.
+
+Should calculate $\rho$ only on what we care about, i.e. `R_t`.
+
+--
+
+So, let's use that, and think about the lags. Can define the lags here. Since it
+ignores other covariates, we don't need to create subsets of the data when
+removing a correlated covariate.
+
+```{r, mvespan1, eval = FALSE}
+# TODO undo eval
+lags_span1 <- list(age4 = c(0, 4, 5),
+                   # pdo_winter_mean = 0,
+                   fraser_mean_spring = 0,
+                   pink = 0)
+
+mve_span1 <- multiview_embedding(data = input_age4_full_span,
+                                 response = "age4",
+                                 lags = lags_span1)  # Do lags_use_multi
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+
+mve_span1$rho_prediction_from_mve
+mve_span1$rho_each_top_subset
+
+mve_span1$lags_of_top_subsets  # These are in order of highest rho
+mve_span1$response_predicted_from_mve   # Overall mve prediction, including
+                                            # for the forecast T+1.
+
+```
+
+HERE: figure this out:
+
+D - All looked good until that last one full of NA's. Need to think a bit more -
+reread Appendix and think about what we need.
+
+D May have the indexing wrong, and need to have final age4 have a value in the
+column. Think that NA is getting used, hence giving NA's in the predictions.
+
+MAYBE don't do the shifting, just leave that (i.e. the lags) to EDM. EDM might
+be doing the shift anyway. And could then maybe take out the -1 I put into
+`pbsEDM::untransform_predictions()`. YES - let EDM do the shifting, and just
+select sensible lags based on the biology. See our paper Appendix.
+
+DOING this in analysis-2025-1.Rmd, copying this file over (want to compare results).
+
+Can also see other methods in pbsEDM/R.
 
 
 
