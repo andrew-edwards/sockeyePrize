@@ -1,5 +1,5 @@
 ---
-title: "Analysing data for 2025 competition"
+title: "Analysing data for 2025 competition - not manually lagging covariates"
 author: "Andrew Edwards and Carrie Holt"
 output: pdf_document
 fontsize: 12pt
@@ -11,19 +11,18 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "",
   cache = TRUE,
-  cache_path = "analysis-2025-cache/",
-  fig.path = "analysis-2025-figs-cache/",
+  cache_path = "analysis-2025-2-cache/",
+  fig.path = "analysis-2025-2-figs-cache/",
   fig.width = 7,
   fig.height = 6
 )
-  # comment = "#>",
-# knitr::dep_auto(path = "analysis-2025-cache/")
+
 knitr::dep_prev()
 ```
 
 ```{r, build, echo = FALSE, eval = FALSE}
 # To build either run this line or click knit button in RStudio:
-rmarkdown::render("analysis-2025.Rmd")
+rmarkdown::render("analysis-2025-2.Rmd")
 ```
 
 ```{r, packages, echo = FALSE, cache = FALSE}
@@ -38,25 +37,27 @@ library(gridExtra)
 library(ggplot2)
 ```
 
-See `analysis-2025-2.Rmd` instead, which copies and then changes this. See note
-on page 77 as to why (basically need to not temporally shift covariates for the input, but
-let EDM deal with the lags).
+Adapting from `analysis-2025-1.Rmd` in which we manually lagged covariates to
+all have the same `return_year`. But this messes up the EDM projections, so
+redoing here without lagging manually, and let EDM select the lags (or we can
+prescribe them). Removing some extra notes from here, but keeping this self
+contained (keeping the descriptions and data wrangling, which we need to change
+anyway).
 
 Next:
 
-  D understand E definition, regarding univariate - yes, $E = 5$ is a lag of 4,
-   since it counts the lag of 0.
+ D understand E definition, regarding univariate - yes, $E = 5$ is a lag of 4,
+    since it counts the lag of 0.
 
-  D use OISST instead of buoy temperatures; moved buoy code to
-    `analysis-2025-buoy-sst-not-needed.Rmd` out of the way.
-
-  D add in updated NP Salmon, already in package.
-  D do Fraser River discharge as is important.
-  D do correlation plot at start of EDM with covariates section
-  - look at multiview embedding code, might want something similar to loop
+ - take out the manual lagging to give `return_year`
+ - figure out lags to to use (or just do all) for multivariate EDM
+ - may need to look at multiview embedding code, might want something similar to loop
    through the multivariate EDM, in terms of trying the different lags. Use
    Luke's function for generating the lags (I think that's the way to go).
-  - And could maybe try multiview also but less polished in the code.
+ - And could maybe try multiview also but less polished in the code. Though a
+    previous attempt seemed to work quite well (actual results weren't great,
+    but was because I had the lags already in there which created a
+    lot of NA's).
 
 
   - see other TODO's here.
@@ -901,16 +902,19 @@ res_span1$results
 plot(res_span1, portrait = FALSE)  # technically not correct
 ```
 
+This looked okay for multivariate. But multiview (below) it's better for EDM to
+deal with the lags (and we have that automated already, and getting short of time).
+
 Need to systematically go through the different options. Look at Luke's lag
 function. Though we already have that working for multiview embedding, so let's
-just use that.
+just use that. Can always try top lag choice back in multivariate.
 
 ### Multiview embedding for the span values
 
 The following worked from `mve_understanding.Rmd` vignette in pbsEDM, to use as
 a template:
 
---
+### Simulated values
 
 It's all working okay. Try shebang one again with longer simulated data and more
 lags. Though the actual top rho values shouldn't change from shebang; the values
@@ -963,8 +967,7 @@ So, let's use that, and think about the lags. Can define the lags here. Since it
 ignores other covariates, we don't need to create subsets of the data when
 removing a correlated covariate.
 
-```{r, mvespan1, eval = FALSE}
-# TODO undo eval
+```{r, mvespan1}
 lags_span1 <- list(age4 = c(0, 4, 5),
                    # pdo_winter_mean = 0,
                    fraser_mean_spring = 0,
@@ -985,7 +988,7 @@ mve_span1$response_predicted_from_mve   # Overall mve prediction, including
 
 ```
 
-HERE: figure this out:
+Figure this out:
 
 D - All looked good until that last one full of NA's. Need to think a bit more -
 reread Appendix and think about what we need.
@@ -993,10 +996,12 @@ reread Appendix and think about what we need.
 D May have the indexing wrong, and need to have final age4 have a value in the
 column. Think that NA is getting used, hence giving NA's in the predictions.
 
-MAYBE don't do the shifting, just leave that (i.e. the lags) to EDM. EDM might
-be doing the shift anyway. And could then maybe take out the -1 I put into
-`pbsEDM::untransform_predictions()`. YES - let EDM do the shifting, and just
-select sensible lags based on the biology. See our paper Appendix.
+MAYBE don't do the shifting, just leave that (i.e. the lags) to EDM. EDM is
+doing the shift anyway. And could then maybe take out the -1 I put into
+`pbsEDM::untransform_predictions()`.
+
+YES - let EDM do the shifting, and just select sensible lags based on the
+biology. See our paper Appendix.
 
 DOING this in analysis-2025-1.Rmd, copying this file over (want to compare results).
 
@@ -1010,6 +1015,11 @@ Can also see other methods in pbsEDM/R.
 
 
 
+
+
+
+
+### This was looking at the continuity of some of the time series, and doing a shorter timespan
 
 So PDO is okay, need to look into others:
 ```{r age4rmNA2}
