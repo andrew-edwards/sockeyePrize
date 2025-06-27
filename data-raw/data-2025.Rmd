@@ -16,7 +16,8 @@ knitr::opts_chunk$set(
   fig.width = 7,
   fig.height = 6
 )
-  # comment = "#>",
+# comment = "#>",
+# knitr::dep_prev()
 ```
 
 ```{r, build, echo = FALSE, eval = FALSE}
@@ -126,9 +127,93 @@ at_sea_all
 summary(at_sea_all)
 ```
 
-Save data in package:
-```{r, savedata}
+## Updated data that now includes spawners
+
+Just want spawners, looks like easy to get by brood year. Definition is:
+
+`Total_Spawners_BroodYear: Number of spawners that produced this BroodYear's cohort`
+
+There's also
+
+`Total_EFS_BroodYear: Number of effective (after pre-spawn mortality) female
+spawners that produced this year's cohort`
+
+but that's only available by return year, so requires more fiddling. BUT really
+should use, though it's only a Fraser River thing (thanks Catarina).
+
+So need to do both - total spawners for all systems, and also (or instead) EFS
+for FR.
+
+### First total spawners, available for all Systems
+
+First do the long form one which is by brood year, which we need for all
+non-Fraser River (though can include it for FR).
+
+```{r, datapreparation4}
+data_dir_updated <- paste0(here::here(),
+                           "/data-raw/data-for-2025-competition-updated/_Data_Updated_June26/Additional_Data_Spawners/Additional_Data_Spawners/")
+
+spawners_brood_year_all_raw <- read.csv(paste0(data_dir_updated,
+                                               "GENERATED_SRDataSet_LongForm.csv"),
+                                        comment.char = "#") %>%
+  tibble::as_tibble()
+
+spawners_brood_year_all_raw
+
+spawners_brood_year_all <- spawners_brood_year_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor)
+spawners_brood_year_all
+
+summary(spawners_brood_year_all)
+```
+
+So that will include recruits also, but we are using them from elsewhere since
+dividing up by ages. Keep BroodYear here in name, to then do wrangling in the
+data analysis.
+
+### Now the more fiddly effective female spawners, which is only available for FR and is already saved differently
+
+```{r, datapreparation5}
+full_long_raw <- read.csv(paste0(data_dir_updated,
+                                              "GENERATED_FullDataSet_LongForm.csv"),
+                                       comment.char = "#") %>%
+  tibble::as_tibble()
+
+full_long_raw
+
+effective_spawners_all <- full_long_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor)
+effective_spawners_all
+
+summary(effective_spawners_all)
+```
+
+Check that only FR has `Total_EFS_BroodYear`:
+
+```{r, datapreparation6}
+summary(filter(effective_spawners_all, System != "Fraser River") %>%
+        select(Total_EFS_BroodYear))
+```
+Indeed. So just save values for FR. Save everything and then extract what we
+need in the data analysis.
+
+```{r, datapreparation7}
+effective_spawners <- filter(effective_spawners_all,
+                             System == "Fraser River")
+
+effective_spawners
+summary(effective_spawners)
+```
+
+Save data in package, doing manually (not evaluated) to not keep overwriting.
+```{r, savedata, eval = FALSE}
 usethis::use_data(brood_all)
 usethis::use_data(returns_all)
 usethis::use_data(at_sea_all)
+usethis::use_data(spawners_brood_year_all)
+usethis::use_data(effective_spawners)
 ```
