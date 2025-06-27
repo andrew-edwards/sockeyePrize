@@ -51,6 +51,9 @@ f <- function(x, digits = 0){
 
 ```
 
+This is without spawners. Using this as a template for including spawner data,
+in `analysis-2025-3.Rmd`.
+
 Adapting from `analysis-2025-1.Rmd` in which we manually lagged covariates to
 all have the same `return_year`. But this messes up the EDM projections, so
 redoing here without lagging manually, and let EDM select the lags (or we can
@@ -60,11 +63,9 @@ anyway).
 
 Next:
 
- D do a big run over lunch, see span5 and then span6. span6 is best so far.
-
  - get the spawners in also (will need wrangling for other stocks anyway). Do
    this analysis with spawners and use that if it's better, else stick with
-   this. Then move onto other stocks.
+   this. Then move onto other stocks. See `analysis-2025-3.Rmd`.
 
  D understand E definition, regarding univariate - yes, $E = 5$ is a lag of 4,
     since it counts the lag of 0.
@@ -1294,7 +1295,7 @@ abline(h = mve_span6$response_predicted_from_mve[T+1], col = "red")
 
 Though need to include lag 0 also for the thing we're predicting.
 
-```{r, span6multivariate
+```{r, span6multivariate}
 mve_span6$lags_of_top_subsets[1]
 
 multivariate_span6 <- pbsEDM(input_age4_span,
@@ -1318,10 +1319,10 @@ for $N$ is still low though, way under a million, similar to a couple of others.
 
 ### Summary (needs updating)
 
-So far span6 is best, has highest $\rho$ and does not have age4 (or anything)
+So far span6 MVE is best, has highest $\rho$ and does not have age4 (or anything)
 with lag of 0, which we cannot use for prediction.
 
-Interesting that all the predictions seem low, though maybe they're extracting
+Interesting that all the predictions seem relatively low, though maybe they're extracting
 the same main sets of lags? Bit hard to compare (a figure would be useful, or a
 table).
 
