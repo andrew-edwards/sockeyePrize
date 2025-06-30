@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
   fig.height = 6
 )
 # comment = "#>",
-# knitr::dep_prev()
+knitr::dep_prev()
 ```
 
 ```{r, build, echo = FALSE, eval = FALSE}
@@ -185,8 +185,11 @@ full_long_raw
 
 effective_spawners_all <- full_long_raw %>%
   dplyr::mutate_at(dplyr::vars(System,
-                               River),
+                               River,
+                               Euro,
+                               GR),
                    factor)
+
 effective_spawners_all
 
 summary(effective_spawners_all)
@@ -215,5 +218,5 @@ usethis::use_data(brood_all)
 usethis::use_data(returns_all)
 usethis::use_data(at_sea_all)
 usethis::use_data(spawners_brood_year_all)
-usethis::use_data(effective_spawners)
+usethis::use_data(effective_spawners, overwrite = TRUE)
 ```
