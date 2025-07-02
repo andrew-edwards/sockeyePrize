@@ -52,7 +52,7 @@ f <- function(x, digits = 0){
 ```
 
 ```{r, river}
-river <- "Quesnel"
+river <- "Raft"
 ```
 
 This is for age4 and age5 for `r river`.
@@ -98,10 +98,12 @@ input_returns <- select(one_returns_age45,      # only for Chilko
   filter(year != 1951)       # since age4 and age5 are 0 for 1951.
 
 # Carrie said to keep the zeros in for Late Stuart 1952 and 1953 (there are some
-# later as well, which the following code would have removed); these probably won't be predicted by MVE since no lags, but could get
-# used as nearest neighbours.
-# which(input_returns == 0)    # 1952 age5 for Chilko, check others manually here
-# input_returns[input_returns == 0] = NA
+# later as well, which the following code would have removed); these probably
+# won't be predicted by MVE since no lags, but could get used as nearest
+# neighbours.
+# Raft - given the only 0 is age5 in the first year, making in NA.
+which(input_returns == 0)    # 1952 age5 for Chilko, check others manually here
+input_returns[input_returns == 0] = NA
 
 input_returns
 
@@ -247,16 +249,17 @@ Update these manually, using 0.3 to exclude related covariates.
 For Late Stuart, the coefficients from `pdo_winter_mean` downwards are the same
 as for Chilko, as expected because they are the non-stock specific covariates.
 
-For Quesnel, non-stock specific covariates:
+For Raft, non-stock specific covariates:
 
 - `total_spawners` and `effective_spawners` (as expected), go with effective (Catarina).
 
 - Chilko: `total_spawners` or `effective_spawners` with either `pink` or `total`; though
   could always try (0.3 cut off is a bit arbitrary). I think we should stick
-  with `effective_spawners` and `pink` though. Late Stuart and Quesnel: not correlated now
-  (so bit more justified in sticking with them). Very cyclic compared to Chilko.
+  with `effective_spawners` and `pink` though. Late Stuart,  Quesnel, and Raft: not correlated now
+  (so bit more justified in sticking with them). Very cyclic compared to Chilko
+  (Raft maybe not so much, haven't looked to carefully.).
 
-So, as for Chilko and Late Stuart, remove:
+So, as for all previous stocks, remove:
 
 - `fraser_peak_spring`
 
@@ -267,6 +270,9 @@ So, as for Chilko and Late Stuart, remove:
 Given BI was not in the best runs for either age4 or age5 for Chilko, not going
 to bother with it going forward (and correlated with PDO anyway).
 
+```{r, exit1, cache = FALSE, eval = FALSE}
+knitr::knit_exit()
+```
 
 # MVE analysis
 
@@ -344,6 +350,9 @@ abline(a = 0, b = 1)
 abline(h = mve_reduced_pdo$response_predicted_from_mve[T+1], col = "red")
 ```
 
+```{r, exit2, cache = FALSE, eval = FALSE}
+knitr::knit_exit()
+```
 
 ## Age 5
 
@@ -358,17 +367,16 @@ First set of age4 lags.
 ```{r, lagscheck}
 lags_reduced_pdo
 
-lags_reduced_pdo_not_in_top_20 <- list(pdo_winter_mean = c(1),
-                                       zoo_total_biomass = c(1, 2))
+lags_reduced_pdo_not_in_top_20 <- list()   # none!
 ```
 
 Chilko had `fraser_mean_spring` lag 1, Late Stuart did not (so took twice as
-long to run the age5 calculation).
+long to run the age5 calculation). Raft has everything in the top 20, including
+zooplankton for the first time (for any stock so far), and it was in the top 2 models!
 
-So may as well not use those for age5, since need to narrow down. Zooplankton
-could be because of the short time series, haven't dug into it.
+So keep everything I guess.
 
-So results in 18 lags below, which is about one hour.
+So results in 21 lags below, which is about 8 hours. Oh well, just set it running.
 
 Do not eval this chunk after doing it once if it
 takes a while and previous chunks have changed.
@@ -377,12 +385,11 @@ takes a while and previous chunks have changed.
 lags_reduced_pdo_age5 <- list(age4 = c(1),
                               age5 = c(1, 2, 3, 4, 5),
                               effective_spawners = c(5),
-                              pdo_winter_mean = c(2, 3),
+                              pdo_winter_mean = c(1, 2, 3),
                               fraser_mean_spring = c(1, 2, 3),
                               pink = c(1, 2, 3),
-                              sst_spring = c(1, 2, 3))
-                              # zoo_total_biomass = c(1, 2, 3))
-                              # bi_anomaly = c(1, 2))
+                              sst_spring = c(1, 2, 3),
+                              zoo_total_biomass = c(1, 2, 3))
 tictoc::tic()
 mve_reduced_pdo_age5 <- multiview_embedding(data = input_river_reduced,
                                             response = "age5",

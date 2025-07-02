@@ -36,7 +36,7 @@ home.
 
 18 lags - probably about an hour, so a sensible limit.
 
-
+21 lags (Raft) - presumably 8 hours.
 
 The full list of stocks is (doing them in order), with our final predictions of returns for each:
 
@@ -44,7 +44,7 @@ Fraser River:
   Chilko	 319,990
   Late Stuart     42,022
   Quesnel        128,392
-  Raft
+  Raft           Started in Desktop 4, 2:30pm Wed. Should be done by 10:30pm.
   Stellako
 Bristol Bay:
   Alagnak
