@@ -8,7 +8,7 @@ down template for each stock in turn (saves changing cache names etc.). So each
 stock has a separate subdirectory. Doing new stocks in desktop 4. Writing notes
 here (so not duplicating in .Rmd).
 
-For Chiko, we used PDO and then BI separately, PDO came out best for both
+For Chilko, we used PDO and then BI separately, PDO came out best for both
 age4 and age5 and so for other stocks we are just going to do PDO to save
 time. So Chilko has extra code for picking the best run for age4 and age5, not
 needed for later ones. Late Stuart onwards has time series code which could go back into
@@ -17,7 +17,13 @@ Chilko also.
 Didn't have time to add in Carrie's longer SST time series, which has some
 NA's which will need thinking about (see her email).
 
+For each .Rmd, change the knit_exit chunks to eval = FALSE, and manually check
+things - just read through.
 
+Bristol Bay:
+starting with report/analysis-2025-3.Rmd, rename to
+bristol-bay/bristol-bay-covariates.Rmd to make bristol_bay_covariates. Then
+probably use report/analysis-2025-4.Rmd as template for the analyses.
 
 Timings. Each extra lag should be $2^XX$ longer.
 
@@ -45,7 +51,7 @@ Fraser River:
   Late Stuart     42,022
   Quesnel        128,392
   Raft           Started in Desktop 4, 2:30pm Wed. Should be done by 10:30pm.
-  Stellako
+  Stellako       Started in Desktop 4, 3:00pm Wed. Should be done by 5:00pm.
 Bristol Bay:
   Alagnak
   Egegik
