@@ -422,29 +422,27 @@ abline(a = 0, b = 1)
 abline(h = mve_reduced_pdo_age5$response_predicted_from_mve[T+1], col = "red")
 ```
 
-```{r, exit, cache = FALSE}
-knitr::knit_exit()
-```
-
 ## Summarise results
 
 Summarise results of the two runs, and add them together (no need for picking
-like Chilko, as we haven't done a BI run here).
+best like Chilko, as we haven't done a BI run here).
 
 ```{r, summarylim}
 lim_common_max <- max(c(input_river$age4,
                         mve_reduced_pdo$response_predicted_from_mve,
                         input_river$age5,
-                        mve_reduced_pdo_age5$response_predicted_from_mve,
+                        mve_reduced_pdo_age5$response_predicted_from_mve),
                       na.rm = TRUE)
 lim_common_max
 lim_common = c(0, lim_common_max)
 ```
 
-Panel plot, now adding in time series plots also:
+Panel plot, now adding in time series plots also. Left column plots have same
+axes for age4 and age5, not so in right-hand time series.
 ```{r, summaryplot}
 par(mfrow = c(2,2))
 
+# Age4 correlation
 plot(input_river$age4,
      mve_reduced_pdo$response_predicted_from_mve[-(T+1)],
      xlab = "Age4 returns - observed",
@@ -454,14 +452,13 @@ plot(input_river$age4,
      ylim = lim_common)
 
 legend("topleft", legend = c(paste("rho is",
-                                    round(mve_reduced_pdo$rho_prediction_from_mve, 2)),
+                                   round(mve_reduced_pdo$rho_prediction_from_mve, 2)),
                               paste("prediction is",
                                     f(mve_reduced_pdo$response_predicted_from_mve[T+1]))))
 abline(a = 0, b = 1)
 abline(h = mve_reduced_pdo$response_predicted_from_mve[T+1], col = "red")
 
-
-# Time series
+# Age4 time series
 plot(input_river$year,
      input_river$age4,
      type = "o",
@@ -476,9 +473,12 @@ points(c(input_river$year, max(input_river$year) + 1),
        col = "red",
        cex = 0.8)
 
-# HERE. Add legend, red is predicted
+legend("topleft",
+       legend = c("observed", "predicted"),
+       pch = c(1, 16),
+       col = c("black", "red"))
 
-# Age5
+# Age5 correlation
 plot(input_river$age5,
      mve_reduced_pdo_age5$response_predicted_from_mve[-(T+1)],
      xlab = "Age5 returns - observed",
@@ -488,15 +488,31 @@ plot(input_river$age5,
      ylim = lim_common)
 
 legend("topleft", legend = c(paste("rho is",
-                                    round(mve_reduced_pdo_age5$rho_prediction_from_mve, 2)),
+                                   round(mve_reduced_pdo_age5$rho_prediction_from_mve, 2)),
                               paste("prediction is",
                                     f(mve_reduced_pdo_age5$response_predicted_from_mve[T+1]))))
 abline(a = 0, b = 1)
 abline(h = mve_reduced_pdo_age5$response_predicted_from_mve[T+1], col = "red")
 
-# Add in age5 time series
+# Age5 time series
+plot(input_river$year,
+     input_river$age5,
+     type = "o",
+     main = "Age5",
+     xlab = "Year",
+     ylab = "Age5 returns")
+     # ylim = lim_common)
 
+points(c(input_river$year, max(input_river$year) + 1),
+       mve_reduced_pdo_age5$response_predicted_from_mve,
+       pch = 16,
+       col = "red",
+       cex = 0.8)
 
+legend("topleft",
+       legend = c("observed", "predicted"),
+       pch = c(1, 16),
+       col = c("black", "red"))
 ```
 
 Summarise, and then sum together age4 and age5 to get our prediction.
@@ -510,7 +526,7 @@ summary <- rbind(summary,
                  c("age5",
                    "PDO",
                    mve_reduced_pdo_age5$rho_prediction_from_mve,
-                   mve_reduced_pdo_age5$response_predicted_from_mve[T+1]),
+                   mve_reduced_pdo_age5$response_predicted_from_mve[T+1])) %>%
   dplyr::mutate_at(vars(age,
                         run),
                    factor) %>%

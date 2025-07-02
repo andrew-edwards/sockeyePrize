@@ -52,7 +52,7 @@ f <- function(x, digits = 0){
 ```
 
 ```{r, river}
-river <- "Late Stuart"
+river <- "Quesnel"
 ```
 
 This is for age4 and age5 for `r river`.
@@ -242,20 +242,21 @@ corrplot::corrplot(cor(input_river,
   )
 ```
 
+Update these manually, using 0.3 to exclude related covariates.
+
 For Late Stuart, the coefficients from `pdo_winter_mean` downwards are the same
 as for Chilko, as expected because they are the non-stock specific covariates.
 
-Using 0.3 to exclude related covariates. Updating these notes for stock-specific
-covariates:
+For Quesnel, non-stock specific covariates:
 
 - `total_spawners` and `effective_spawners` (as expected), go with effective (Catarina).
 
 - Chilko: `total_spawners` or `effective_spawners` with either `pink` or `total`; though
   could always try (0.3 cut off is a bit arbitrary). I think we should stick
-  with `effective_spawners` and `pink` though. Late Stuart: not correlated now
+  with `effective_spawners` and `pink` though. Late Stuart and Quesnel: not correlated now
   (so bit more justified in sticking with them). Very cyclic compared to Chilko.
 
-So, as for Chilko, remove:
+So, as for Chilko and Late Stuart, remove:
 
 - `fraser_peak_spring`
 
@@ -343,6 +344,7 @@ abline(a = 0, b = 1)
 abline(h = mve_reduced_pdo$response_predicted_from_mve[T+1], col = "red")
 ```
 
+
 ## Age 5
 
 Remove lags that weren't important for age4 (see Chilko for more explanation),
@@ -356,15 +358,17 @@ First set of age4 lags.
 ```{r, lagscheck}
 lags_reduced_pdo
 
-lags_reduced_pdo_not_in_top_20 <- list(zoo_total_biomass = c(1, 2))
-
-# Chilko had fraser_mean_spring lag 1 also
+lags_reduced_pdo_not_in_top_20 <- list(pdo_winter_mean = c(1),
+                                       zoo_total_biomass = c(1, 2))
 ```
+
+Chilko had `fraser_mean_spring` lag 1, Late Stuart did not (so took twice as
+long to run the age5 calculation).
 
 So may as well not use those for age5, since need to narrow down. Zooplankton
 could be because of the short time series, haven't dug into it.
 
-So results in 19 lags below, which is about two hours.
+So results in 18 lags below, which is about one hour.
 
 Do not eval this chunk after doing it once if it
 takes a while and previous chunks have changed.
@@ -373,7 +377,7 @@ takes a while and previous chunks have changed.
 lags_reduced_pdo_age5 <- list(age4 = c(1),
                               age5 = c(1, 2, 3, 4, 5),
                               effective_spawners = c(5),
-                              pdo_winter_mean = c(1, 2, 3),
+                              pdo_winter_mean = c(2, 3),
                               fraser_mean_spring = c(1, 2, 3),
                               pink = c(1, 2, 3),
                               sst_spring = c(1, 2, 3))
@@ -422,29 +426,27 @@ abline(a = 0, b = 1)
 abline(h = mve_reduced_pdo_age5$response_predicted_from_mve[T+1], col = "red")
 ```
 
-```{r, exit, cache = FALSE}
-knitr::knit_exit()
-```
-
 ## Summarise results
 
 Summarise results of the two runs, and add them together (no need for picking
-like Chilko, as we haven't done a BI run here).
+best like Chilko, as we haven't done a BI run here).
 
 ```{r, summarylim}
 lim_common_max <- max(c(input_river$age4,
                         mve_reduced_pdo$response_predicted_from_mve,
                         input_river$age5,
-                        mve_reduced_pdo_age5$response_predicted_from_mve,
+                        mve_reduced_pdo_age5$response_predicted_from_mve),
                       na.rm = TRUE)
 lim_common_max
 lim_common = c(0, lim_common_max)
 ```
 
-Panel plot, now adding in time series plots also:
+Panel plot, now adding in time series plots also. Left column plots have same
+axes for age4 and age5, not so in right-hand time series.
 ```{r, summaryplot}
 par(mfrow = c(2,2))
 
+# Age4 correlation
 plot(input_river$age4,
      mve_reduced_pdo$response_predicted_from_mve[-(T+1)],
      xlab = "Age4 returns - observed",
@@ -454,14 +456,13 @@ plot(input_river$age4,
      ylim = lim_common)
 
 legend("topleft", legend = c(paste("rho is",
-                                    round(mve_reduced_pdo$rho_prediction_from_mve, 2)),
+                                   round(mve_reduced_pdo$rho_prediction_from_mve, 2)),
                               paste("prediction is",
                                     f(mve_reduced_pdo$response_predicted_from_mve[T+1]))))
 abline(a = 0, b = 1)
 abline(h = mve_reduced_pdo$response_predicted_from_mve[T+1], col = "red")
 
-
-# Time series
+# Age4 time series
 plot(input_river$year,
      input_river$age4,
      type = "o",
@@ -476,9 +477,12 @@ points(c(input_river$year, max(input_river$year) + 1),
        col = "red",
        cex = 0.8)
 
-# HERE. Add legend, red is predicted
+legend("topleft",
+       legend = c("observed", "predicted"),
+       pch = c(1, 16),
+       col = c("black", "red"))
 
-# Age5
+# Age5 correlation
 plot(input_river$age5,
      mve_reduced_pdo_age5$response_predicted_from_mve[-(T+1)],
      xlab = "Age5 returns - observed",
@@ -488,15 +492,31 @@ plot(input_river$age5,
      ylim = lim_common)
 
 legend("topleft", legend = c(paste("rho is",
-                                    round(mve_reduced_pdo_age5$rho_prediction_from_mve, 2)),
+                                   round(mve_reduced_pdo_age5$rho_prediction_from_mve, 2)),
                               paste("prediction is",
                                     f(mve_reduced_pdo_age5$response_predicted_from_mve[T+1]))))
 abline(a = 0, b = 1)
 abline(h = mve_reduced_pdo_age5$response_predicted_from_mve[T+1], col = "red")
 
-# Add in age5 time series
+# Age5 time series
+plot(input_river$year,
+     input_river$age5,
+     type = "o",
+     main = "Age5",
+     xlab = "Year",
+     ylab = "Age5 returns")
+     # ylim = lim_common)
 
+points(c(input_river$year, max(input_river$year) + 1),
+       mve_reduced_pdo_age5$response_predicted_from_mve,
+       pch = 16,
+       col = "red",
+       cex = 0.8)
 
+legend("topleft",
+       legend = c("observed", "predicted"),
+       pch = c(1, 16),
+       col = c("black", "red"))
 ```
 
 Summarise, and then sum together age4 and age5 to get our prediction.
@@ -510,7 +530,7 @@ summary <- rbind(summary,
                  c("age5",
                    "PDO",
                    mve_reduced_pdo_age5$rho_prediction_from_mve,
-                   mve_reduced_pdo_age5$response_predicted_from_mve[T+1]),
+                   mve_reduced_pdo_age5$response_predicted_from_mve[T+1])) %>%
   dplyr::mutate_at(vars(age,
                         run),
                    factor) %>%

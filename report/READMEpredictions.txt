@@ -42,10 +42,8 @@ The full list of stocks is (doing them in order), with our final predictions of 
 
 Fraser River:
   Chilko	 319,990
-  Late Stuart    expected to be done: 1:40pm, desktop 4. Manually update panel plot code then rerun
-  Quesnel        Copied over Late Stuart before refining the plotting code, so
-                  just recopy final Late Stuart one from Summarise results
-                  onwards once I've adapted the .Rmd based on these data.
+  Late Stuart     42,022
+  Quesnel        128,392
   Raft
   Stellako
 Bristol Bay:
@@ -59,3 +57,8 @@ Bristol Bay:
   Wood
 Columbia River:
   Bonneville Lock & Dam
+
+
+
+Future ideas: Late Stuart has a kind of regime change, could try fitting from
+1999 onwards (Zooplankton might come into play then)
