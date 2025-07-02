@@ -1589,8 +1589,7 @@ fraser_covariates <- input_age4 %>%
             "effective_spawners",
             "total_spawners"))
 
-usethis::use_data(fraser_covariates,
-                  overwrite = TRUE)
+usethis::use_data(fraser_covariates)  # might fail when running again
 ```
 
 
