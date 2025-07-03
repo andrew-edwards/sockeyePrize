@@ -78,8 +78,8 @@ Fraser River:
   Quesnel        128,392
   Raft            18,278
   Stellako        59,209
-Bristol Bay:   doing covariates in Desktop 2.
-  Alagnak
+Bristol Bay:
+  Alagnak      5,109,841
   Egegik
   Igushik
   Kvichak

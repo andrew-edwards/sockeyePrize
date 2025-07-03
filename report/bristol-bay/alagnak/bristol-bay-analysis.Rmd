@@ -462,7 +462,7 @@ abline(h = age23_res$response_predicted_from_mve[T+1], col = "red")
 ```
 
 
-```{r, exit2, cache = FALSE, eval = TRUE}
+```{r, exit2, cache = FALSE, eval = FALSE}
 knitr::knit_exit()
 ```
 
@@ -470,50 +470,35 @@ knitr::knit_exit()
 
 Summarise results of the four different age classes, and add together for final prediction.
 
-HERE
-
 ```{r, summarylim}
-lim_common_max <- max(c(input_river$age4,
-                        mve_reduced_pdo$response_predicted_from_mve,
-                        input_river$age5,
-                        mve_reduced_pdo_age5$response_predicted_from_mve),
+lim_common_max <- max(c(input_river$age12,
+                        input_river$age13,
+                        input_river$age22,
+                        input_river$age23,
+                        age12_res$response_predicted_from_mve,
+                        age13_res$response_predicted_from_mve,
+                        age22_res$response_predicted_from_mve,
+                        age23_res$response_predicted_from_mve),
                       na.rm = TRUE)
 lim_common_max
 lim_common = c(0, lim_common_max)
 ```
 
-Panel plot, now adding in time series plots also. Left column plots have same
-axes for age4 and age5, not so in right-hand time series.
-```{r, summaryplot}
-par(mfrow = c(2,2))
+Do panel plot of time series, not repeating the earlier ones.
+```{r, summaryplot, fig.height = 9}
+par(mfrow = c(4,1))
 
-# Age4 correlation
-plot(input_river$age4,
-     mve_reduced_pdo$response_predicted_from_mve[-(T+1)],
-     xlab = "Age4 returns - observed",
-     ylab = "Age4 returns - predicted",
-     main = "Age4",
-     xlim = lim_common,
+# Age12 time series
+plot(input_river$year,
+     input_river$age13,
+     type = "o",
+     main = "Age12",
+     xlab = "Year",
+     ylab = "Age12 returns",
      ylim = lim_common)
 
-legend("topleft", legend = c(paste("rho is",
-                                   round(mve_reduced_pdo$rho_prediction_from_mve, 2)),
-                              paste("prediction is",
-                                    f(mve_reduced_pdo$response_predicted_from_mve[T+1]))))
-abline(a = 0, b = 1)
-abline(h = mve_reduced_pdo$response_predicted_from_mve[T+1], col = "red")
-
-# Age4 time series
-plot(input_river$year,
-     input_river$age4,
-     type = "o",
-     main = "Age4",
-     xlab = "Year",
-     ylab = "Age4 returns")
-     # ylim = lim_common)
-
 points(c(input_river$year, max(input_river$year) + 1),
-       mve_reduced_pdo$response_predicted_from_mve,
+       age12_res$response_predicted_from_mve,
        pch = 16,
        col = "red",
        cex = 0.8)
@@ -523,33 +508,58 @@ legend("topleft",
        pch = c(1, 16),
        col = c("black", "red"))
 
-# Age5 correlation
-plot(input_river$age5,
-     mve_reduced_pdo_age5$response_predicted_from_mve[-(T+1)],
-     xlab = "Age5 returns - observed",
-     ylab = "Age5 returns - predicted",
-     main = "PDO age5",
-     xlim = lim_common,
+# Age13 time series
+plot(input_river$year,
+     input_river$age13,
+     type = "o",
+     main = "Age13",
+     xlab = "Year",
+     ylab = "Age13 returns",
      ylim = lim_common)
 
-legend("topleft", legend = c(paste("rho is",
-                                   round(mve_reduced_pdo_age5$rho_prediction_from_mve, 2)),
-                              paste("prediction is",
-                                    f(mve_reduced_pdo_age5$response_predicted_from_mve[T+1]))))
-abline(a = 0, b = 1)
-abline(h = mve_reduced_pdo_age5$response_predicted_from_mve[T+1], col = "red")
+points(c(input_river$year, max(input_river$year) + 1),
+       age13_res$response_predicted_from_mve,
+       pch = 16,
+       col = "red",
+       cex = 0.8)
 
-# Age5 time series
+legend("topleft",
+       legend = c("observed", "predicted"),
+       pch = c(1, 16),
+       col = c("black", "red"))
+
+
+# Age22 time series
 plot(input_river$year,
-     input_river$age5,
+     input_river$age22,
      type = "o",
-     main = "Age5",
+     main = "Age22",
      xlab = "Year",
-     ylab = "Age5 returns")
-     # ylim = lim_common)
+     ylab = "Age22 returns",
+     ylim = lim_common)
 
 points(c(input_river$year, max(input_river$year) + 1),
-       mve_reduced_pdo_age5$response_predicted_from_mve,
+       age22_res$response_predicted_from_mve,
+       pch = 16,
+       col = "red",
+       cex = 0.8)
+
+legend("topleft",
+       legend = c("observed", "predicted"),
+       pch = c(1, 16),
+       col = c("black", "red"))
+
+# Age23 time series
+plot(input_river$year,
+     input_river$age23,
+     type = "o",
+     main = "Age23",
+     xlab = "Year",
+     ylab = "Age23 returns",
+     ylim = lim_common)
+
+points(c(input_river$year, max(input_river$year) + 1),
+       age23_res$response_predicted_from_mve,
        pch = 16,
        col = "red",
        cex = 0.8)
@@ -563,17 +573,20 @@ legend("topleft",
 Summarise, and then sum together age4 and age5 to get our prediction.
 
 ```{r, summarise}
-summary <- tibble(age = "age4",
-                  run = "PDO",
-                  rho = mve_reduced_pdo$rho_prediction_from_mve ,
-                  prediction = mve_reduced_pdo$response_predicted_from_mve[T+1])
+summary <- tibble(class = "age12",
+                  rho = age12_res$rho_prediction_from_mve ,
+                  prediction = age12_res$response_predicted_from_mve[T+1])
 summary <- rbind(summary,
-                 c("age5",
-                   "PDO",
-                   mve_reduced_pdo_age5$rho_prediction_from_mve,
-                   mve_reduced_pdo_age5$response_predicted_from_mve[T+1])) %>%
-  dplyr::mutate_at(vars(age,
-                        run),
+                 c("age13",
+                   age13_res$rho_prediction_from_mve,
+                   age13_res$response_predicted_from_mve[T+1]),
+                 c("age22",
+                   age22_res$rho_prediction_from_mve,
+                   age22_res$response_predicted_from_mve[T+1]),
+                 c("age23",
+                   age23_res$rho_prediction_from_mve,
+                   age23_res$response_predicted_from_mve[T+1])) %>%
+  dplyr::mutate_at(vars(class),
                    factor) %>%
   dplyr::mutate_at(vars(rho,
                         prediction),
@@ -582,10 +595,10 @@ summary <- rbind(summary,
 summary
 
 knitr::kable(summary,
-             digits = c(NA, NA, 2, 6))
-stopifnot(nrow(summary) == 2)
+             digits = c(NA, 2, 6))
+stopifnot(nrow(summary) == 4)
 
 total_returns_prediction <- sum(summary$prediction)
 ```
 
-The prediction for combined age4 and age5 returns `r river` is ... `r f(total_returns_prediction)`.
+The prediction for combined age4 and age5 returns for `r river` is ... `r f(total_returns_prediction)`.
