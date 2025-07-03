@@ -1,5 +1,5 @@
 ---
-title: "Analysing data for 2025 competition - streamlined to do each stock, see previous iterations for more details"
+title: "Bristol Bay 2025 - individual stock analysis"
 author: "Andrew Edwards and Carrie Holt"
 output: pdf_document
 fontsize: 12pt
@@ -11,8 +11,8 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "",
   cache = TRUE,
-  cache_path = "analysis-2025-4-cache/",
-  fig.path = "analysis-2025-4-figs-cache/",
+  cache_path = "bristol-bay-analysis-cache/",
+  fig.path = "bristol-bay-analysis-figs-cache/",
   fig.width = 7,
   fig.height = 6
 )
@@ -22,7 +22,7 @@ knitr::dep_prev()
 
 ```{r, build, echo = FALSE, eval = FALSE}
 # To build either run this line or click knit button in RStudio:
-rmarkdown::render("analysis-2025-4.Rmd")
+rmarkdown::render("bristol-bay-analysis.Rmd")
 ```
 
 ```{r, packages, echo = FALSE, cache = FALSE}
@@ -52,131 +52,123 @@ f <- function(x, digits = 0){
 ```
 
 ```{r, river}
-river <- "Raft"
+river <- "Alagnak"
 ```
 
-This is for age4 and age5 for `r river`.
+This is for age4 and age5 for `r river`, though have do four calculations.
+
+Try to predict:
+
+- `age12` (my notation):  AgeClass_1.2 returns each year, say 2021 as an example. From `returns_all`.
+
+- `age13`: `AgeClass_1.3 returns each year, (2021), an additional covariate would be AgeClass_1.2 returns.
+
+- `age22`: AgeClass_2.2 returns each year, (2021).
+
+- `age23`: AgeClass_2.3 returns each year, (2021), an additional covariate would be AgeClass_2.2 returns
+
+Do each separately and then give the sum as the total prediction.
+
+Covariates are (removing ones we don't have -- see `bristol-bay-covariates.Rmd`
+for the full determination of the environmental stock-independent ones.
+
+D PDO in year of outmigration (May-August 2019), two years prior to return, for AgeClass_1.2 and AgeClass_2.2.
+
+D PDO in year of outmigration (May-August 2018), three years prior to return, for AgeClass_1.3 and AgeClass_2.3.
+
+D from "total_np_salmon.csv", total pink salmon abundance in N Pacific returning the same return year as being predicted (2021), to predict AgeClass_1.2 and AgeClass_2.2 returns
+
+D total pink salmon abundance in N Pacific returning the year prior to the year being predicted (2020), to predict AgeClass_1.3 and AgeClass_2.3 returns (an alternative hypothesis is that pink salmon in the same return year as being predicted could be used for these age classes as well)
+
+```{r, cov}
+bristol_bay_covariates
+```
 
 # Returns
 
-```{r classes}
-classes_age4 <- c("AgeClass_0.3",
-                  "AgeClass_1.2",
-                  "AgeClass_2.1")
+Not doing combined age4 then age5 like for Fraser River, rather doing each of
+the four listed above. Think can just make one big tibble with everything, and
+then select the response variable appropriately.
 
-classes_age5 <- c("AgeClass_0.4",
-                  "AgeClass_1.3",
-                  "AgeClass_2.2",
-                  "AgeClass_3.1")
+
+Won't need:
+```{r classes}
+classes <- c("AgeClass_1.2",
+             "AgeClass_1.3",
+             "AgeClass_2.2",
+             "AgeClass_2.3")
 ```
 
-We want to predict `returns_all$Total_Returns`, by doing age4 and age5
-separately and then sum.
+(We did include more for Fraser River).
 
-```{r sumreturns}
-one_returns <- dplyr::filter(returns_all,
-                             River == river)
+```{r returns}
+river_returns <- dplyr::filter(returns_all,
+                               River == river)
+river_returns
+summary(river_returns)
 
-one_returns_age45 <- rowwise(one_returns) %>%
-  mutate(age4 = sum(c_across(any_of(classes_age4)),
-                    na.rm = TRUE)) %>%
-  mutate(age5 = sum(c_across(any_of(classes_age5)),
-                    na.rm = TRUE)) %>%
-  ungroup() %>%
-  select("System",
-         "River",
-         "ReturnYear",
-         "age4",
-         "age5")
+river_returns_2 <- dplyr::select(river_returns,
+                               ReturnYear,
+                               Total_Returns,
+                               unlist(classes)) %>%
+  rowwise() %>%
+  mutate(total_of_included = sum(c_across(any_of(classes)),
+                                 na.rm = TRUE)) %>%
+  mutate(total_difference = Total_Returns - total_of_included) %>% ungroup()
+      # to check what we're missing by excluding some classes
 
-one_returns_age45 %>% a()
+river_returns_2
+summary(river_returns_2)
+summary(river_returns_2$total_of_included)
+summary(river_returns_2$total_difference)
+select(river_returns_2, ReturnYear, total_difference)
+```
+So max excluded is about 10% of the maximum total (might not be the same year),
+which is probably fine.
 
-input_returns <- select(one_returns_age45,      # only for Chilko
-                      year = ReturnYear,
-                      age4,
-                      age5) %>%
-  filter(year != 1951)       # since age4 and age5 are 0 for 1951.
+```{r rename}
+input_returns <- select(river_returns,
+                        year = ReturnYear,
+                        age12 = AgeClass_1.2,
+                        age13 = AgeClass_1.3,
+                        age22 = AgeClass_2.2,
+                        age23 = AgeClass_2.3)
+summary(input_returns)
 
-# Carrie said to keep the zeros in for Late Stuart 1952 and 1953 (there are some
-# later as well, which the following code would have removed); these probably
-# won't be predicted by MVE since no lags, but could get used as nearest
-# neighbours.
-# Raft - given the only 0 is age5 in the first year, making in NA.
-which(input_returns == 0)    # 1952 age5 for Chilko, check others manually here
-input_returns[input_returns == 0] = NA
+input_returns %>% pacea::a()
+```
 
-input_returns
+No actual 0's, but some `10^-8` in there. No need to replace any leading zeros
+like for Fraser River.
 
-# in analysis-2025-3.Rmd had added NA for 2025, but then take out later, so just
-# not bothering here.
-
+```{r, back}
 # Now add five earlier years with NA's, since things like PDO and spawners might
 #  go back 4-5 years.
 yr <- min(input_returns$year)
 yr
-input_returns <- rbind(c(yr - 5, NA, NA),
-                     c(yr - 4, NA, NA),
-                     c(yr - 3, NA, NA),
-                     c(yr - 2, NA, NA),
-                     c(yr - 1, NA, NA),
+input_returns <- rbind(c(yr - 5, rep(NA, 4)),
+                     c(yr - 4, rep(NA, 4)),
+                     c(yr - 3, rep(NA, 4)),
+                     c(yr - 2, rep(NA, 4)),
+                     c(yr - 1, rep(NA, 4)),
                      input_returns)
 input_returns
 input_returns %>% tail()
 
-if(min(input_returns$year != 1947)){
+# For Bristol Bay, based on first stock analysing
+if(min(input_returns$year != 1958)){
   stop("check covariates and years")
 }
 
 ```
 
-## Spawners
+HERE
 
-For Chilko and other FR, we want to use effective spawners (which we don't have
-for other systems). Brood year is in there, which is what we want to use
-and let EDM do the lagging.
-
-```{r, eff1}
-effective_spawners
-eff <- select(effective_spawners,
-              River,
-              Euro,
-              BroodYear,
-              Total_Spawners_BroodYear,
-              Total_EFS_BroodYear)
-eff
+```{r, exit3, cache = FALSE, eval = FALSE}
+knitr::knit_exit()
 ```
 
-The effective spawners for a brood year should be the same (for all
-age classes, which is `Euro`), and that is what we want (also check total; don't
-really need this for each stock, but code already done):
-```{r eff2}
-eff_summ <- summarise(group_by(eff,
-                               River,
-                               BroodYear),
-                      total_spawners_brood_year =
-                        unique(Total_Spawners_BroodYear),
-                      efs_brood_year = unique(Total_EFS_BroodYear)) %>%
-  ungroup()
-eff_summ
-eff_summ %>% tail()
-```
-Just need the total and EFS columns for the analysis.
-
-```{r, onespanw}
-one_spawners <- filter(eff_summ,
-                       River == river)
-
-one_spawners  # Great, it starts four years before first returns, so might mess
-              # up for EDM for age5, but EDM will take care of it?
-
-one_spawners_use <- select(one_spawners,
-                           year = BroodYear,
-                           total_spawners = total_spawners_brood_year,
-                           effective_spawners = efs_brood_year)
-one_spawners_use %>% a()
-```
-
-Now join returns, spawners, and System-wide covariates into one tibble.
+Now join returns and System-wide covariates into one tibble.
 
 ```{r input}
 input_river <- left_join(input_returns,

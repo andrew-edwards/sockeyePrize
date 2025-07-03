@@ -40,7 +40,7 @@ correlation plots. Aha - given so few covariates, we don't need to manually
 reduce them (like we did for age5 based on age4 results for F River), so can just set one
 up and then copy for the others. And should hopefully run fairly quickly.
 
-
+HERE run alagnak, check .pdf, see HERE to carry on.
 
 
 
