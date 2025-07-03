@@ -559,3 +559,96 @@ total_returns_prediction <- sum(summary$prediction)
 ```
 
 The prediction for combined age4 and age5 returns `r river` is ... `r f(total_returns_prediction)`.
+
+## Figuring out why so many NAs in age4 prediction
+
+Doing here so the late chunks don't get re-run. May have to go back and rerun,
+or this might just make sense.
+
+TLDR Conclusion: every of the top 181 subsets, as used for MVE, includes either `sst_spring` (all except 2)
+and/or `zoo_total_biomass` (the remaining 2, plus in some that do have
+`sst_spring`). These data streams are shorter, so preclude a prediction in early
+years for each SSR. Since all SSRs therefore don't have values for early years,
+ignoring NA's in early years when combining doesn't help. Hence, no predictions
+before 1985 (and zoo start in 1996). Think this is also why we have NaN's not NA's in the prediction
+vector.
+
+So age4 calculations are all correct, so have selected the best lags for age5,
+so no need to rerun them.
+
+```{r, whyna}
+num_top_subsets <- length(mve_reduced_pdo$rho_each_top_subset)
+includes_sst_spring <- rep(NA,
+                           num_top_subsets)
+
+for(i in 1:num_top_subsets){
+  # Need to also check for sst_spring1 and sst_spring2 as unlist with both lags
+  # creates these names
+  includes_sst_spring[i] <- "sst_spring" %in%
+    names(unlist(mve_reduced_pdo$lags_of_top_subsets[i])) |
+      "sst_spring1" %in%
+    names(unlist(mve_reduced_pdo$lags_of_top_subsets[i])) |
+      "sst_spring2" %in%
+    names(unlist(mve_reduced_pdo$lags_of_top_subsets[i]))
+}
+
+includes_sst_spring[1:20]    # so all of first 20 do have it
+index_no_sst_spring <- which(!includes_sst_spring)
+index_no_sst_spring
+
+# Wow, only two don't have sst_spring. So just look at manually, commenting out
+# extra code that I wrote to look at zooplankton also (as I'd thought there were
+# lots with sst_spring, before fixing the sst_spring1 and sst_spring2 bug in above loop.
+```
+
+So just print and manually check them:
+```{r, nosstspring}
+mve_reduced_pdo$lags_of_top_subsets[index_no_sst_spring]
+```
+
+As expected, they both have `zoo_total_biomass`, which indeed does not span the
+whole time series.
+
+Hence all the top lags have either `sst_spring` and/or (in two cases)
+`zoo_total_biomass`. The earliest these have data is `sst_spring`, in:
+```{r, sstspringstart}
+filter(input_river_reduced, !is.na(sst_spring))
+
+# And the first non-NA for the prediction is
+min(input_river_reduced$year[!is.na(mve_reduced_pdo$response_predicted_from_mve)],
+    na.rm = TRUE)
+```
+
+Which is about right, given the lags. Could dig in and double check. 1982 data
+can't predict 1983 or 1984 for any of the top subsets seems a littl strange.
+
+### Unneeded zooplankton check, but keep in case need some time
+```{r, includeszooplankton, eval = FALSE, echo = FALSE}
+# First three all have have zoo_total_biomass (looking at printed versions
+# above), so check if all of these do
+
+num_no_sst_spring <- length(index_no_sst_spring)
+includes_zooplankton <- rep(NA,
+                           num_no_sst_spring)
+
+for(i in 1:num_no_sst_spring){
+  includes_zooplankton[i] <- "zoo_total_biomass" %in%
+    names(unlist(mve_reduced_pdo$lags_of_top_subsets[index_no_sst_spring[i]]))
+}
+
+includes_zooplankton
+
+index_no_zooplankton <- which(!includes_zooplankton) # careful, index wrt the
+# num_no_sst_spring ones, I think. Could switch it, Bit confused.
+
+index_no_zooplankton
+
+num_no_zooplankton <- length(index_no_zooplankton)
+num_no_zooplankton
+
+# Lags for those indices, can look manually:
+for(j in 1:num_no_zooplankton){
+  mve_reduced_pdo$lags_of_top_subsets[index_no_sst_spring[index_no_zooplankton[j]]] %>% print()
+}
+
+```

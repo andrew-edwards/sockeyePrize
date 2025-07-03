@@ -20,6 +20,10 @@ NA's which will need thinking about (see her email).
 For each .Rmd, change the knit_exit chunks to eval = FALSE, and manually check
 things - just read through.
 
+Stellako age4s - all SVEs had sst_spring (starts in 1982) or zooplankton (starts
+even later), which means they can't make predictions before 1985, so the MVE
+cannot either. See the .Rmd for more details.
+
 Bristol Bay
 ***********
 
@@ -29,7 +33,12 @@ Going to do four separate calculations then combine them (1.2, 1.3, 2.2,
 bristol-bay/bristol-bay-covariates.Rmd to make bristol_bay_covariates, based on
  report/analysis-2025-3.Rmd for Fraser River (also did some analyses in that).
 
-Probably use report/analysis-2025-4.Rmd as template for the analyses.
+Probably use report/analysis-2025-4.Rmd as template for the analyses (i.e. not a
+later modified one from a river subdirectory). Actually, might be best to use
+the latest simpler one, and just add anything else in that's needed. No need for
+correlation plots. Aha - given so few covariates, we don't need to manually
+reduce them (like we did for age5 based on age4 results for F River), so can just set one
+up and then copy for the others. And should hopefully run fairly quickly.
 
 
 
@@ -61,10 +70,8 @@ Fraser River:
   Late Stuart     42,022
   Quesnel        128,392
   Raft           Started in Desktop 4, 2:30pm Wed. Should be done by 10:30pm.
-  Stellako       Started in Desktop 4, 3:00pm Wed. Should be done by
-    5:00pm. NEED to troubleshoot - age4's had a bunch of NA's, which I don't
-    think I'd spotted. Think about.
-Bristol Bay:
+  Stellako        59,209
+Bristol Bay:   doing covariates in Desktop 2.
   Alagnak
   Egegik
   Igushik
@@ -79,4 +86,6 @@ Columbia River:
 
 
 Future ideas: Late Stuart has a kind of regime change, could try fitting from
-1999 onwards (Zooplankton might come into play then)
+1999 onwards (Zooplankton might come into play then).
+Longer SST time series should be good - see notes in Stellako analysis.
+,
