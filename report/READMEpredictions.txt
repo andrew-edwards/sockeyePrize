@@ -80,8 +80,8 @@ Fraser River:
   Stellako        59,209
 Bristol Bay:
   Alagnak      5,109,841
-  Egegik
-  Igushik
+  Egegik       5,213,997
+  Igushik   TODO, just getting Columbia set up as slightly different, these all repeat
   Kvichak
   Naknek
   Nushagak
