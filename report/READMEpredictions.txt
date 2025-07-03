@@ -66,7 +66,9 @@ home.
 
 18 lags - probably about an hour, so a sensible limit.
 
-21 lags (Raft) - presumably 8 hours.
+21 lags (Raft) - presumably 8 hours. Took 10 but crashed computer but .rds for
+age5 had saved. So for long ones just do not cache the calculation and saveRDS
+chunk, or the readRDS chunk.
 
 The full list of stocks is (doing them in order), with our final predictions of returns for each:
 
