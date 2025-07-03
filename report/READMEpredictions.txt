@@ -20,10 +20,20 @@ NA's which will need thinking about (see her email).
 For each .Rmd, change the knit_exit chunks to eval = FALSE, and manually check
 things - just read through.
 
-Bristol Bay:
-starting with report/analysis-2025-3.Rmd, rename to
-bristol-bay/bristol-bay-covariates.Rmd to make bristol_bay_covariates. Then
-probably use report/analysis-2025-4.Rmd as template for the analyses.
+Bristol Bay
+***********
+
+Going to do four separate calculations then combine them (1.2, 1.3, 2.2,
+2.3). So wrangle the data differently (not combining ages) than for Fraser River.
+
+bristol-bay/bristol-bay-covariates.Rmd to make bristol_bay_covariates, based on
+ report/analysis-2025-3.Rmd for Fraser River (also did some analyses in that).
+
+Probably use report/analysis-2025-4.Rmd as template for the analyses.
+
+
+
+
 
 Timings. Each extra lag should be $2^XX$ longer.
 
@@ -51,7 +61,9 @@ Fraser River:
   Late Stuart     42,022
   Quesnel        128,392
   Raft           Started in Desktop 4, 2:30pm Wed. Should be done by 10:30pm.
-  Stellako       Started in Desktop 4, 3:00pm Wed. Should be done by 5:00pm.
+  Stellako       Started in Desktop 4, 3:00pm Wed. Should be done by
+    5:00pm. NEED to troubleshoot - age4's had a bunch of NA's, which I don't
+    think I'd spotted. Think about.
 Bristol Bay:
   Alagnak
   Egegik
