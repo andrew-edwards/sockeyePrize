@@ -379,9 +379,16 @@ So keep everything I guess.
 So results in 21 lags below, which is about 8 hours. Oh well, just set it running.
 
 Do not eval this chunk after doing it once if it
-takes a while and previous chunks have changed.
+takes a while and previous chunks have changed. Not running as maybe too big to
+cache, but .rds was saved.
 
-```{r, red3}
+For Raft age5 that crashed computer, since .rds file is 317Mb, plus tried to
+cache also, plus I hadn't turned computer off for a week probably. Aha - it
+saved the .rds file, but didn't do the big cache of results. Also don't cache
+the next chunks, since .rds is saved anyway (means the subsequent chunks might
+always get rerun, but they're not big calculations so that's fine).
+
+```{r, red3, eval = FALSE}
 lags_reduced_pdo_age5 <- list(age4 = c(1),
                               age5 = c(1, 2, 3, 4, 5),
                               effective_spawners = c(5),
@@ -401,9 +408,10 @@ tictoc::toc()
 saveRDS(mve_reduced_pdo_age5, file = "mve_reduced_pdo_age5.rds")
 ```
 
+
 Reload and then see results.
 
-```{r, red3load}
+```{r, red3load, cache = FALSE}
 mve_reduced_pdo_age5 <- readRDS("mve_reduced_pdo_age5.rds")
 
 mve_reduced_pdo_age5$rho_prediction_from_mve

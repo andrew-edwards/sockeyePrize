@@ -20,6 +20,11 @@ NA's which will need thinking about (see her email).
 For each .Rmd, change the knit_exit chunks to eval = FALSE, and manually check
 things - just read through.
 
+Raft age4s - I hadn't noticed that is has the same issues as Stellako (can't
+make early predictions. Presume it's the same reason as for Stellako - see that
+text for details and code (no time to run it now). Took about 14hours to run the
+age5s, all for a predition of only 2,555 fish!
+
 Stellako age4s - all SVEs had sst_spring (starts in 1982) or zooplankton (starts
 even later), which means they can't make predictions before 1985, so the MVE
 cannot either. See the .Rmd for more details.
@@ -69,7 +74,7 @@ Fraser River:
   Chilko	 319,990
   Late Stuart     42,022
   Quesnel        128,392
-  Raft           Started in Desktop 4, 2:30pm Wed. Should be done by 10:30pm.
+  Raft            18,278
   Stellako        59,209
 Bristol Bay:   doing covariates in Desktop 2.
   Alagnak
