@@ -45,9 +45,6 @@ correlation plots. Aha - given so few covariates, we don't need to manually
 reduce them (like we did for age5 based on age4 results for F River), so can just set one
 up and then copy for the others. And should hopefully run fairly quickly.
 
-HERE run alagnak, check .pdf, see HERE to carry on.
-
-
 
 Timings. Each extra lag should be $2^XX$ longer.
 
@@ -81,16 +78,16 @@ Fraser River:
 Bristol Bay:
   Alagnak      5,109,841
   Egegik       5,213,997
-  Igushik   TODO, just getting Columbia set up as slightly different, these all repeat
-  Kvichak
-  Naknek
-  Nushagak
-  Ugashik
-  Wood
+  Igushi       1,326,347
+  Kvichak     11,895,509
+  Naknek       3,061,509
+  Nushagak    13,039,231
+  Ugashik     desktop 3
+  Wood        desktop 3
 Columbia River:
-  Bonneville Lock & Dam
+  Bonneville Lock & Dam  Desktop 4
 
-
+Kvichak has age12 of 7.7 million (I think) but has the worst correlation so far.
 
 Future ideas: Late Stuart has a kind of regime change, could try fitting from
 1999 onwards (Zooplankton might come into play then).
