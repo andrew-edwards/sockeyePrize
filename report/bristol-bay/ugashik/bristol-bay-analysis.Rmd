@@ -143,8 +143,7 @@ summary(input_returns)
 input_returns %>% pacea::a()
 ```
 
-No actual 0's, but some `10^-8` in there. No need to replace any leading zeros
-like for Fraser River.
+No actual 0's.
 
 ```{r, back}
 # Now add five earlier years with NA's, since things like PDO and spawners might
