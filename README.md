@@ -11,83 +11,56 @@ save figures.
 
 [![](https://img.shields.io/badge/lifecycle-under%20development-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#under%20development)
 [![R-CMD-check](https://github.com/andrew-edwards/sockeyePrize/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/andrew-edwards/sockeyePrize/actions/workflows/R-CMD-check.yaml)
-[![Codecov test
-coverage](https://codecov.io/gh/andrew-edwards/sockeyePrize/branch/main/graph/badge.svg)](https://app.codecov.io/gh/andrew-edwards/sockeyePrize?branch=main)
-![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2Fandrew-edwards%2FsockeyePrize&label=VISITORS&countColor=%23263759&style=flat&labelStyle=lower)
-<!-- badges: end -->
+<!--
+[![Codecov test coverage](https://codecov.io/gh/andrew-edwards/sockeyePrize/branch/main/graph/badge.svg)](https://app.codecov.io/gh/andrew-edwards/sockeyePrize?branch=main)
+[Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2Fandrew-edwards%2FsockeyePrize&label=VISITORS&countColor=%23263759&style=flat&labelStyle=lower)
+--> <!-- badges: end -->
 
 An R package for entering the SalmonPrize competition
 
-# Data objects
+Andrew M. Edwards and Carrie A. Holt
 
-Currently just has the provided data wrangled into tibbles that are
-saved as data objects in this package. So can do:
+The code was written for our analyses, is not currently intended to be
+easily usable by others, and there are various improvements that we
+would make. However, it does document all our analyses so they are fully
+traceable.
 
-``` r
-at_sea_all
-#> # A tibble: 1,020 × 22
-#>    System      River   MarineEntryYear AgeClass_0.1 AgeClass_0.2 AgeClass_0.3
-#>    <fct>       <fct>             <int>        <dbl>        <dbl>        <dbl>
-#>  1 Bristol Bay Alagnak            1956           NA    NA           NA       
-#>  2 Bristol Bay Alagnak            1957           NA    NA           NA       
-#>  3 Bristol Bay Alagnak            1958           NA    NA           NA       
-#>  4 Bristol Bay Alagnak            1959           NA    NA           NA       
-#>  5 Bristol Bay Alagnak            1960           NA    NA            0       
-#>  6 Bristol Bay Alagnak            1961           NA     0            0       
-#>  7 Bristol Bay Alagnak            1962            0     0.000140     7.27e+ 2
-#>  8 Bristol Bay Alagnak            1963            0     0            1.83e- 9
-#>  9 Bristol Bay Alagnak            1964            0     0            1.07e- 9
-#> 10 Bristol Bay Alagnak            1965            0     0            8.09e-10
-#> # ℹ 1,010 more rows
-#> # ℹ 16 more variables: AgeClass_0.4 <dbl>, AgeClass_0.5 <dbl>,
-#> #   AgeClass_1.1 <dbl>, AgeClass_1.2 <dbl>, AgeClass_1.3 <dbl>,
-#> #   AgeClass_1.4 <dbl>, AgeClass_1.5 <dbl>, AgeClass_2.1 <dbl>,
-#> #   AgeClass_2.2 <dbl>, AgeClass_2.3 <dbl>, AgeClass_2.4 <dbl>,
-#> #   AgeClass_3.1 <dbl>, AgeClass_3.2 <dbl>, AgeClass_3.3 <dbl>,
-#> #   AgeClass_3.4 <dbl>, Juveniles_Marine_Entry <dbl>
-brood_all
-#> # A tibble: 978 × 22
-#>    System  River BroodYear Total_Recruits AgeClass_0.1 AgeClass_0.2 AgeClass_0.3
-#>    <fct>   <fct>     <int>          <dbl>        <dbl>        <dbl>        <dbl>
-#>  1 Bristo… Alag…      1955            NA            NA    NA           NA       
-#>  2 Bristo… Alag…      1956            NA            NA    NA           NA       
-#>  3 Bristo… Alag…      1957            NA            NA    NA           NA       
-#>  4 Bristo… Alag…      1958            NA            NA    NA           NA       
-#>  5 Bristo… Alag…      1959            NA            NA    NA            0       
-#>  6 Bristo… Alag…      1960            NA            NA     0            0       
-#>  7 Bristo… Alag…      1961            NA             0     0.000140     7.27e+ 2
-#>  8 Bristo… Alag…      1962            NA             0     0            1.83e- 9
-#>  9 Bristo… Alag…      1963        414873.            0     0            1.07e- 9
-#> 10 Bristo… Alag…      1964        381900.            0     0            8.09e-10
-#> # ℹ 968 more rows
-#> # ℹ 15 more variables: AgeClass_0.4 <dbl>, AgeClass_0.5 <dbl>,
-#> #   AgeClass_1.1 <dbl>, AgeClass_1.2 <dbl>, AgeClass_1.3 <dbl>,
-#> #   AgeClass_1.4 <dbl>, AgeClass_1.5 <dbl>, AgeClass_2.1 <dbl>,
-#> #   AgeClass_2.2 <dbl>, AgeClass_2.3 <dbl>, AgeClass_2.4 <dbl>,
-#> #   AgeClass_3.1 <dbl>, AgeClass_3.2 <dbl>, AgeClass_3.3 <dbl>,
-#> #   AgeClass_3.4 <dbl>
-returns_all
-#> # A tibble: 906 × 22
-#>    System  River ReturnYear Total_Returns AgeClass_0.1 AgeClass_0.2 AgeClass_0.3
-#>    <fct>   <fct>      <int>         <dbl>        <dbl>        <dbl>        <dbl>
-#>  1 Bristo… Alag…       1963       378138.            0      0           0       
-#>  2 Bristo… Alag…       1964       759383.            0      1.40e-4     0       
-#>  3 Bristo… Alag…       1965       397861.            0      0           7.27e+ 2
-#>  4 Bristo… Alag…       1966       394077.            0      0           1.83e- 9
-#>  5 Bristo… Alag…       1967       344306.            0      0           1.07e- 9
-#>  6 Bristo… Alag…       1968       314034.            0      0           8.09e-10
-#>  7 Bristo… Alag…       1969       324289.            0      2.16e-9     0       
-#>  8 Bristo… Alag…       1970       500780.            0      0           4.55e- 9
-#>  9 Bristo… Alag…       1971       537294.            0      4.11e+2     4.61e+ 2
-#> 10 Bristo… Alag…       1972       302589.            0      0           6.49e-10
-#> # ℹ 896 more rows
-#> # ℹ 15 more variables: AgeClass_0.4 <dbl>, AgeClass_0.5 <dbl>,
-#> #   AgeClass_1.1 <dbl>, AgeClass_1.2 <dbl>, AgeClass_1.3 <dbl>,
-#> #   AgeClass_1.4 <dbl>, AgeClass_1.5 <dbl>, AgeClass_2.1 <dbl>,
-#> #   AgeClass_2.2 <dbl>, AgeClass_2.3 <dbl>, AgeClass_2.4 <dbl>,
-#> #   AgeClass_3.1 <dbl>, AgeClass_3.2 <dbl>, AgeClass_3.3 <dbl>,
-#> #   AgeClass_3.4 <dbl>
-```
+Analyses are done by running R Markdown files in the reports/ folder for
+each of the three river systems. See report/READMEpredictions.txt for
+specific details.
+
+# Methods – multiview embedding with environmental covariates
+
+We used multiview embedding, a form of empirical dynamic modelling.
+Rather than define mechanistic models, the approach translates time
+series of data into a path through a multi-dimensional space, whose axes
+are lagged values of the variables. We modelled each stock separately,
+and included various relevant environmental covariates. These were
+sea-surface temperature, Pink Salmon abundance in the North Pacific,
+Fraser River discharge, zooplankton in the Strait of Georgia, the
+Pacific Decadal Oscillation, and the North Pacific Current Bifurcation
+index. Most of the covariates were taken from our pacea R package, and
+analyses conducted using our pbsEDM R package.
+
+References for background:
+
+Edwards A.M, Rogers L.A., and Holt C.A. (2024). Explaining empirical
+dynamic modelling using verbal, graphical and mathematical approaches.
+Ecology and Evolution, 14:e10903, 1-12.
+<https://doi.org/10.1002/ece3.10903>
+
+Edwards A.M., Tai T.C., Watson J., Peña M.A., Hilborn A., Hannah C.G.,
+Rooper C.N., Flynn K.L., and Oldford, G.L. (2024). pacea: An R package
+of Pacific ecosystem information to help facilitate an ecosystem
+approach to fisheries management. <https://github.com/pbs-assess/pacea>
+
+Rogers L. A., and Edwards A. M. (2023). pbsEDM: An R package to
+implement some of the methods of empirical dynamic modelling.
+<https://github.com/pbs-assess/pbsEDM>.
+
+Ye H., and Sugihara, G. (2016). Information leverage in interconnected
+ecosystems: overcoming the curse of dimensionality. Science,
+353:922-925. <https://doi.org/10.1126/science.aag0863>.
 
 ## Installation
 

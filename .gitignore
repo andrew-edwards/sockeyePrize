@@ -9,3 +9,12 @@
 
 *.rds
 *.csv
+
+data-raw/data-for-2025-competition-updated/
+data-raw/data-for-2025-competition/
+data-raw/from-gottfried/
+data-raw/mediterranean-data.Rmd
+report/columbia/bonneville/columbia-analysis.log
+report/columbia/bonneville/columbia-analysis.tex
+
+tests/

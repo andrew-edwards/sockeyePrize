@@ -88,7 +88,7 @@ Columbia River:
   Bonneville Lock & Dam
               499,456
 
-Write up of methods:
+Write up of methods (copied for salmonprize entry, and adapted for our README):
 
 Multiview embedding with environmental covariates
 
@@ -127,6 +127,8 @@ Doing retrospectives would be prohibitively difficult with our current set
 up. We aim to refine our methods for next year.
 
 
+
+
 Columbia ran but crashed when building pdf, need to not print so many
 results. See below for error.
 
@@ -134,7 +136,8 @@ Kvichak has age12 of 7.7 million (I think) but has the worst correlation so far.
 
 Future ideas: Late Stuart has a kind of regime change, could try fitting from
 1999 onwards (Zooplankton might come into play then).
-Longer SST time series should be good - see notes in Stellako analysis.
+Longer SST time series should be good - see notes in Stellako analysis. Can try
+with lightstation data maybe.
 
 Error for columbia .tex crash:
 ! Dimension too large.
