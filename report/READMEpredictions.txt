@@ -88,6 +88,25 @@ Columbia River:
   Bonneville Lock & Dam
               499,456
 
+15/7/25 call:
+Total is (from salmonprize): 60,820,767,  of which about 57,000,000 is Bristol
+Bay! Curry Cunningham pre-season is 54-60,000,000.
+Jeff Fryer - From a June 30 TAC statement regarding the Columbia Basin sockeye
+run: Passage of sockeye at Bonneville Dam has been lower than expected given
+the pre-season Columbia River mouth forecast (350,200). Based on the information
+to date and discussion of the output from several Bonneville Dam passage
+projection models, TAC updated the expected 2025 return of Columbia River
+Sockeye to 183,200 fish at the Columbia River mouth for the U.S. vs OR parties
+to use for management of fisheries.
+
+If folks want to follow the progression of the Bristol Bay run, I update this
+website each day:
+https://alaskasalmonprogram.org/bristol-bay-daily-updates/
+
+https://www.youtube.com/@SalmonPrize
+
+
+
 Write up of methods (copied for salmonprize entry, and adapted for our README):
 
 Multiview embedding with environmental covariates
