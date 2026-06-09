@@ -2,6 +2,11 @@ READMEpredictions.txt
 
 Doing each stock in a separate folder. Chilko was first and has a longer .Rmd.
 
+2026: first simplifying down fraser/late_stuart/analysis-2025-4.Rmd which was
+the whittled down version that I think got used for all future analyses. Doing
+that in late_stuart_simplified. To then share with Kaitlyn and Stephanie etc. 
+
+
 fraser_covariates are created in report/analysis-2025-3.Rmd. That was used as a
 template for fraser/chilko/analysis-2025-4.Rmd, which is then used as a whittled
 down template for each stock in turn (saves changing cache names etc.). So each
