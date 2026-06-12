@@ -1,11 +1,30 @@
 READMEpredictions.txt
 
-Doing each stock in a separate folder. Chilko was first and has a longer .Rmd.
+2026
+****
 
-2026: first simplifying down fraser/late_stuart/analysis-2025-4.Rmd which was
+First simplifying down fraser/late_stuart/analysis-2025-4.Rmd which was
 the whittled down version that I think got used for all future analyses. Doing
-that in late_stuart_simplified. To then share with Kaitlyn and Stephanie etc. 
+that in:
+late_stuart_simplified/.
 
+Starting a report-2026/ to then share with Kaitlyn and Stephanie etc.
+
+D Move late_stuart_simplified to there (with folder structure) once done. To
+Columbia 2026 as thats' the only new data we currently have, so will get the
+years correct. I think.
+D Do fraser-covariates-2026.Rmd there to create fraser_covariates_2026 data object in
+   package, simplified down from report/analysis-2025-3.Rmd that was used in
+  2025. 
+- Columbia predictions: 
+- move this part to main README
+
+-----
+
+2025
+****
+
+Doing each stock in a separate folder. Chilko was first and has a longer .Rmd.
 
 fraser_covariates are created in report/analysis-2025-3.Rmd. That was used as a
 template for fraser/chilko/analysis-2025-4.Rmd, which is then used as a whittled

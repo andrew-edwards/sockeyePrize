@@ -1,5 +1,5 @@
 ---
-title: "Analysing data for 2025 competition - streamlined to do each stock, see previous iterations for more details"
+title: "Simplifying down the analysis-2025-4.Rmd from Late Stuart"
 author: "Andrew Edwards and Carrie Holt"
 output: pdf_document
 fontsize: 12pt
@@ -11,8 +11,8 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "",
   cache = TRUE,
-  cache_path = "analysis-2025-4-cache/",
-  fig.path = "analysis-2025-4-figs-cache/",
+  cache_path = "analysis-2025-4-simplified-cache/",
+  fig.path = "analysis-2025-4-simplified-figs-cache/",
   fig.width = 7,
   fig.height = 6
 )
@@ -22,7 +22,7 @@ knitr::dep_prev()
 
 ```{r, build, echo = FALSE, eval = FALSE}
 # To build either run this line or click knit button in RStudio:
-rmarkdown::render("analysis-2025-4.Rmd")
+rmarkdown::render("analysis-2025-4-simplified.Rmd")
 ```
 
 ```{r, packages, echo = FALSE, cache = FALSE}
@@ -32,7 +32,7 @@ load_all()
 # library(sockeyePrize)
 library(dplyr)
 library(pbsEDM)
-library(pacea)    # make sure to update
+library(pacea)    # make sure to update, see https://github.com/pbs-assess/pacea
 library(gridExtra)
 library(ggplot2)
 
@@ -55,7 +55,9 @@ f <- function(x, digits = 0){
 river <- "Late Stuart"
 ```
 
-This is for age4 and age5 for `r river`.
+This is for age4 and age5 for `r river`. The main multiview embedding can take a
+while to run, see the variables `rerun_age4` and `rerun_age5` later and set them
+to `FALSE` after you have run the code once.
 
 # Returns
 
@@ -288,10 +290,13 @@ input_river_reduced <- select(input_river,
 
 ## Age 4
 
-First, lags with PDO (not BI). Do not eval this chunk after doing it once if it
-takes a while and previous chunks have changed.
+First, lags with PDO (not BI). Can take a while so saving the results as .rds
+and not rerunning if the results are already saved. IF YOU WANT TO RERUN THE
+MULTIVIEW EMBEDDING you need to set `rerun_age4 = TRUE` here.
 
 ```{r, red1}
+rerun_age4 <- FALSE
+
 lags_reduced_pdo <- list(age4 = c(1, 2, 3, 4),
                          effective_spawners = c(4),
                          pdo_winter_mean = c(1, 2),
@@ -300,22 +305,23 @@ lags_reduced_pdo <- list(age4 = c(1, 2, 3, 4),
                          sst_spring = c(1, 2),
                          zoo_total_biomass = c(1, 2))
 
-tictoc::tic()
-mve_reduced_pdo <- multiview_embedding(data = input_river_reduced,
-                                       response = "age4",
-                                       lags = lags_reduced_pdo)
-# Centre and scaling and first differencing get done automatically, in
-#  state_space_reconstruction_for_sve()
-tictoc::toc()
+if(rerun_age4){
+  tictoc::tic()
+  mve_reduced_pdo <- multiview_embedding(data = input_river_reduced,
+                                         response = "age4",
+                                         lags = lags_reduced_pdo)
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+  tictoc::toc()   # will be wrong if computer hibernated
 
-saveRDS(mve_reduced_pdo, file = "mve_reduced_pdo.rds")
+  saveRDS(mve_reduced_pdo, file = "mve_reduced_pdo.rds")
+} else {
+  mve_reduced_pdo <- readRDS("mve_reduced_pdo.rds")
+}
 ```
 
-Reload and then see results.
-
+See the results
 ```{r, red1load}
-mve_reduced_pdo <- readRDS("mve_reduced_pdo.rds")
-
 mve_reduced_pdo$rho_prediction_from_mve
 mve_reduced_pdo$rho_each_top_subset
 
@@ -366,10 +372,12 @@ could be because of the short time series, haven't dug into it.
 
 So results in 19 lags below, which is about two hours.
 
-Do not eval this chunk after doing it once if it
-takes a while and previous chunks have changed.
+Can take a while so saving the results as .rds
+and not rerunning if the results are already saved. IF YOU WANT TO RERUN THE
+MULTIVIEW EMBEDDING you need to set `rerun_age5 = TRUE` here.
 
 ```{r, red3}
+rerun_age5 <- FALSE
 lags_reduced_pdo_age5 <- list(age4 = c(1),
                               age5 = c(1, 2, 3, 4, 5),
                               effective_spawners = c(5),
@@ -379,22 +387,26 @@ lags_reduced_pdo_age5 <- list(age4 = c(1),
                               sst_spring = c(1, 2, 3))
                               # zoo_total_biomass = c(1, 2, 3))
                               # bi_anomaly = c(1, 2))
-tictoc::tic()
-mve_reduced_pdo_age5 <- multiview_embedding(data = input_river_reduced,
-                                            response = "age5",
-                                            lags = lags_reduced_pdo_age5)
-# Centre and scaling and first differencing get done automatically, in
-#  state_space_reconstruction_for_sve()
-tictoc::toc()
+if(rerun_age5){
+  tictoc::tic()
+  mve_reduced_pdo_age5 <- multiview_embedding(data = input_river_reduced,
+                                              response = "age5",
+                                              lags = lags_reduced_pdo_age5)
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+  tictoc::toc()
+  
+  saveRDS(mve_reduced_pdo_age5, file = "mve_reduced_pdo_age5.rds")
+} else {
+  mve_reduced_pdo_age5 <- readRDS("mve_reduced_pdo_age5.rds")
+}
 
-saveRDS(mve_reduced_pdo_age5, file = "mve_reduced_pdo_age5.rds")
+
 ```
 
-Reload and then see results.
+See results.
 
 ```{r, red3load}
-mve_reduced_pdo_age5 <- readRDS("mve_reduced_pdo_age5.rds")
-
 mve_reduced_pdo_age5$rho_prediction_from_mve
 mve_reduced_pdo_age5$rho_each_top_subset
 
