@@ -1,0 +1,295 @@
+---
+title: "Wrangling the salmon data provided for 2026 SalmonPrize competition"
+author: "Andrew Edwards and Carrie Holt"
+output: pdf_document
+fontsize: 12pt
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r, setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "",
+  cache = TRUE,
+  cache_path = "data-2026-cache/",
+  fig.path = "data-2026-figs-cache/",
+  fig.width = 7,
+  fig.height = 6
+)
+# comment = "#>",
+knitr::dep_prev()
+```
+
+```{r, build, echo = FALSE, eval = FALSE}
+# To build either run this line or click knit button in RStudio:
+rmarkdown::render("data-2026.Rmd")
+```
+
+```{r, packages, echo = FALSE}
+library(dplyr)
+load_all()
+```
+
+2026: Currently just have Columbia River values, so can't just rerun last year's
+code. 
+
+Looking at new `report-2026/columbia-analysis.Rmd` think we just need what was
+in last year's `returns_all`. So just get that saved here, exiting before doing
+the other wrangling that we needed last year for all stocks.
+
+Okay, there are two files in
+`data-for-2026-competition/Columbia_2026/1_SourceData/` (and more elsewhere):
+
+- `ReturnsbyAge_COLUMBIA_2026.csv`
+
+- `Spawners_COLUMBIA_2026.csv`.
+
+Think we just want the first, hopefully columns etc. are same as last year.
+Yes, it's the one with colummns like `AgeClass_0.2` etc.
+
+Notes from that file:
+
+1. Bonneville Lock & Dam is the return estimate to the lower river (after marine interceptions; but before in-river harvests)
+
+1. Wenatchee and Okanagan stocks account for most of the total sockeye return to the Columbia
+
+1. Wenatchee and Okanagan return estimates are based on estimated stock proportions
+at Bonneville Lock & Dam
+
+1. For other stocks this quantity might be labelled gross escapement or terminal run or return to river
+
+1. For Wenatchee have replaced NA for some minor age classes with 0 in order to
+allow for total recruits by brood year calculations
+
+
+So last year there was just one River, this year three. Have to give 'All of
+Columbia', 'Okanagan', and 'Wenatchee'.
+
+
+Moving code up from below (this was `data-2025.Rmd` last year).
+
+```{r, dataprep}
+data_dir <- paste0(here::here(),
+                   "/data-raw/data-for-2026-competition/Columbia_2026/1_SourceData/")
+
+returns_all_raw <- read.csv(paste0(data_dir,
+                                   "ReturnsbyAge_COLUMBIA_2026.csv"),
+                            comment.char = "#") %>%
+  tibble::as_tibble()
+
+returns_all <- returns_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor)
+
+returns_all
+
+summary(returns_all)
+```
+
+This looks like that in `data-2025.Rmd`, except here is just for the one System,
+but this one now has three Rivers.
+
+```{r, savedata1}
+returns_columbia_2026 <- returns_all
+usethis::use_data(returns_columbia_2026)
+```
+
+
+```{r, stop, cache = FALSE}
+knitr::knit_exit()
+```
+
+
+
+Wrangling the data. From instructions Word file:
+
+
+To assist Salmon Prize teams in rapidly developing their estimates, we have pre-packaged brood and return tables for the fourteen runs across three systems. This includes:
+
+1.	All 14 runs across the three systems
+a.	Brood table
+b.	Return table
+c.	First year at sea table
+
+2.	Bristol Bay System — covering eight runs ()
+a.	Brood table
+b.	Return Table
+
+3.	Fraser River — covering five runs ()
+a.	Brood table
+b.	Return table
+
+4.	Columbia River — one run covering the entire system
+a.	Brood table
+b.	Return table
+
+These tables have been prepared by Alejandro Yanez. If anyone has any questions please reach out to Alejandro by email at a.yanez@oceans.ubc.ca.
+
+--
+
+So it seems that we can just get those in part 1. Will wrangle them a little and
+make into data objects in our package.
+
+
+# Data loading
+
+
+```{r, datapreparation}
+data_dir <- paste0(here::here(),
+                   "/data-raw/data-for-2025-competition/Brood_Return_First_Year_At_Sea_Tables/")
+
+brood_all_raw <- read.csv(paste0(data_dir,
+                                 "Combined_Brood_Bristol_Columbia_Fraser.csv")) %>%
+  tibble::as_tibble()
+
+brood_all_raw
+
+names(brood_all_raw)
+
+brood_all <- brood_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor) %>%
+  dplyr::select(-"X")
+
+brood_all
+
+summary(brood_all)
+```
+
+
+Now do same for returns and then first year at sea:
+```{r, datapreparation2}
+returns_all_raw <- read.csv(paste0(data_dir,
+                                 "Combined_Return_Bristol_Columbia_Fraser.csv")) %>%
+  tibble::as_tibble()
+
+returns_all_raw
+
+names(returns_all_raw)
+
+returns_all <- returns_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor) %>%
+  dplyr::select(-"X")
+
+returns_all
+
+summary(returns_all)
+```
+
+```{r, datapreparation3}
+at_sea_all_raw <- read.csv(paste0(data_dir,
+                                 "Combined_First_Year_At_Sea.csv")) %>%
+  tibble::as_tibble()
+
+at_sea_all_raw
+
+names(at_sea_all_raw)
+
+at_sea_all <- at_sea_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor) %>%
+  dplyr::select(-"X")
+
+at_sea_all
+
+summary(at_sea_all)
+```
+
+## Updated data that now includes spawners
+
+Just want spawners, looks like easy to get by brood year. Definition is:
+
+`Total_Spawners_BroodYear: Number of spawners that produced this BroodYear's cohort`
+
+There's also
+
+`Total_EFS_BroodYear: Number of effective (after pre-spawn mortality) female
+spawners that produced this year's cohort`
+
+but that's only available by return year, so requires more fiddling. BUT really
+should use, though it's only a Fraser River thing (thanks Catarina).
+
+So need to do both - total spawners for all systems, and also (or instead) EFS
+for FR.
+
+### First total spawners, available for all Systems
+
+First do the long form one which is by brood year, which we need for all
+non-Fraser River (though can include it for FR).
+
+```{r, datapreparation4}
+data_dir_updated <- paste0(here::here(),
+                           "/data-raw/data-for-2025-competition-updated/_Data_Updated_June26/Additional_Data_Spawners/Additional_Data_Spawners/")
+
+spawners_brood_year_all_raw <- read.csv(paste0(data_dir_updated,
+                                               "GENERATED_SRDataSet_LongForm.csv"),
+                                        comment.char = "#") %>%
+  tibble::as_tibble()
+
+spawners_brood_year_all_raw
+
+spawners_brood_year_all <- spawners_brood_year_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor)
+spawners_brood_year_all
+
+summary(spawners_brood_year_all)
+```
+
+So that will include recruits also, but we are using them from elsewhere since
+dividing up by ages. Keep BroodYear here in name, to then do wrangling in the
+data analysis.
+
+### Now the more fiddly effective female spawners, which is only available for FR and is already saved differently
+
+```{r, datapreparation5}
+full_long_raw <- read.csv(paste0(data_dir_updated,
+                                              "GENERATED_FullDataSet_LongForm.csv"),
+                                       comment.char = "#") %>%
+  tibble::as_tibble()
+
+full_long_raw
+
+effective_spawners_all <- full_long_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River,
+                               Euro,
+                               GR),
+                   factor)
+
+effective_spawners_all
+
+summary(effective_spawners_all)
+```
+
+Check that only FR has `Total_EFS_BroodYear`:
+
+```{r, datapreparation6}
+summary(filter(effective_spawners_all, System != "Fraser River") %>%
+        select(Total_EFS_BroodYear))
+```
+Indeed. So just save values for FR. Save everything and then extract what we
+need in the data analysis.
+
+```{r, datapreparation7}
+effective_spawners <- filter(effective_spawners_all,
+                             System == "Fraser River")
+
+effective_spawners
+summary(effective_spawners)
+```
+
+Save data in package, doing manually (not evaluated) to not keep overwriting.
+```{r, savedata, eval = FALSE}
+usethis::use_data(brood_all)
+usethis::use_data(returns_all)
+usethis::use_data(at_sea_all)
+usethis::use_data(spawners_brood_year_all)
+usethis::use_data(effective_spawners, overwrite = TRUE)
+```

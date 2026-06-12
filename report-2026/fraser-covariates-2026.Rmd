@@ -1,0 +1,1379 @@
+---
+title: "Creating Fraser River covariates to go into some pbsEDM analyses"
+author: "Andrew Edwards and Carrie Holt"
+output: pdf_document
+fontsize: 12pt
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r, setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "",
+  cache = TRUE,
+  cache_path = "fraser-covariates-2026-cache/",
+  fig.path = "fraser-covariates-2026-figs-cache/",
+  fig.width = 7,
+  fig.height = 6
+)
+
+knitr::dep_prev()
+```
+
+```{r, build, echo = FALSE, eval = FALSE}
+# To build either run this line or click knit button in RStudio:
+rmarkdown::render("fraser-covariates-2026.Rmd")
+```
+
+```{r, packages, echo = FALSE, cache = FALSE}
+load_all()
+# Other users need to uncomment these two lines. 
+# remotes::install_github("andrew-edwards/sockeyePrize")
+# library(sockeyePrize)
+library(dplyr)
+library(pbsEDM)   # remotes::install_github("pbs-assess/pbsEDM")
+library(pacea)    # remotes::install_github("pbs-assess/pbsEDM")
+                  #   make sure to get latest update
+library(gridExtra)
+library(ggplot2)
+
+# From Chris's hake
+f <- function(x, digits = 0){
+
+  if(is.null(x)){
+    return(x)
+  }
+
+  format(round(x,
+               digits),
+         big.mark = ",",
+         nsmall = digits)
+}
+
+```
+
+Construct just the environmental covariates in 2026, adapting code that we used
+in the 2025 salmon prize competition (code for 2025 was
+`report/analysis-2025-3.Rmd`, just adapting the covariate part of that). 
+
+These all come from pacea, except `north_pacific_salmon` which was obtained from
+Brendan Rogers and saved into the current package.
+
+These covariates (including things like the months to use for some of them) were
+selected by Carrie and Andy in 2025 for Fraser River Chilko (we may have some justifications written up
+elsewhere). 
+
+Other can adapt this as they see fit, it should provide a good template.
+
+Then see EDM analysis in TODO.
+
+# Fraser River EDM - what we would put into pbsEDM.
+
+Try to predict:
+
+- age4 returns each year, say 2021 as an example. <!-- From `one_returns_age45`
+  in original analysis-->
+
+- age5 returns each year (2021), an additional covariate would be age4 returns.
+
+Do each seperately and then give the sum as the total prediction.
+
+So, age4 returns in 2021:
+
+ 2017: spawned in freshwater as age0, though think it's the winter, so could be
+ early 2018
+
+ 2018: stay in freshwater as age1
+
+ 2019: outmigration to ocean as age2
+
+ 2020: at-sea as age3
+
+ 2021: return as age4
+
+We assumed mostly 1.X, meaning they do 1 year in freshwater (think we looked at
+the 0.X and 2.X and there were smaller). But just to note that the above life
+cycle isn't true for all fish.
+
+Environmental covariates would be (D = Done, N = not needed):
+
+- PDO in the winter (Nov 2018 to Mar 2019) preceding outmigration for age4.
+
+- PDO in the winter (average of Nov 2017 to Mar 2018 and Nov 2018 to Mar 2019)
+  preceding outmigration for age5 for Chilko.
+
+- PDO in the winter (Nov 2017 to Mar 2018) preceding outmigration for other
+  age5's.
+
+N Temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood
+  Knolls" (Apr-Jul average), "Halibut Bank" (Apr-Jun average). Year of
+  outmigration, after the PDO Mar calculation, so 2019 for 2021 return year.
+  Had thought that because hese did not work great (think maybe some missing data?), try the other buoys in SoG, now that I
+  have the code done to look at fairly easily. But now doing OISST. 
+
+- OISST - could either use Apr-Jul average for an area, or just pick the pixel
+  closest to Halibut Bank buoy, which I think was our first choice.
+
+- peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
+  (same as buoy temperatures). Caveat now from SOPO meeting is that the Hope
+  station is not so indicative of what's happening further down the river (I think).
+
+- total pink salmon abundance in N Pacific. Second or third years of marine
+  life of the sockeye (as competition). Year after the temperature data (second
+  year), 2020.  `np_salmon` has `return_year_of_np_salmon`
+  Carrie contacting Hannah Hunter -- think that informed Carrie's notes for the
+  other two river systems below (even if it didn't, that's what we'll
+  use). Brendan has sent us 2024, now in this package. See section below. Have
+  asked Brendan and Dylan for 2025.
+
+- total salmon abundance in N Pacific. Same as pink. Andy: though won't the
+  non-pinks be out there for longer so we should look at multiple years? And
+  don't think the years match up, see section below.
+
+- copepods the year of outmigration (same as SST). Total biomass anomaly.
+
+- bifurcation index, year of outmigration (same as SST). Not yet available from
+  Mike Malick for 2025 though.
+
+
+```{r, initialise}
+start_year <- 1940           # Had taken from Chilko one_returns_age45, but just
+                             #  pick a slightly earlier year here
+end_year <- 2025              # Think this will be the year before the current
+# year, have to check (it was automated from specific salmon data in 2025 code)
+```
+
+TODO Had `Analysis for Fraser River Chilko` etc. (see `analysis-2025-3.Rmd` but removing here to just focus
+on non-stock-specific covariates. 
+
+### PDO in winter.
+
+PDO in the winter (Nov 2018 to Mar 2019) preceding outmigration for age4. So in
+EDM will expect a lag of 2 years.
+
+Bit fiddly to group Nov to Mar, doing a quick kludge here but
+should generalise in a function and add some checks. TODO at some point and put
+into pacea. The year here corresponds to the year of the January in the middle
+of the Nov-Mar average.
+
+```{r pdo}
+winter_months <- c(1, 2, 3, 11, 12)
+pdo_winter_months <- filter(pdo, month %in% winter_months)
+pdo_winter_months <- pdo_winter_months[-(1:3), ]    # need to generalise
+pdo_winter_months <- cbind(pdo_winter_months,
+                           winter_group = rep(1:(length(unique(pdo_winter_months$year)) - 1),
+                                              each = length(winter_months))) %>%
+  as_tibble()    # fails if not jan-mar in final year; need to ;
+# generalise TODO
+pdo_winter_months
+
+pdo_winter <- summarise(group_by(pdo_winter_months,
+                                 winter_group),
+                        year = max(year),
+                        pdo_winter_mean = mean(anomaly)) %>%
+  select(-c("winter_group"))
+
+pdo_winter %>% tail()
+```
+
+So we already have the `pdo_winter_mean` for 2026, but EDM should not need it as
+we expect the influence to be from two years before (for 2025 age4 returns)  during outmigration.
+
+### Temperature -- from OISST
+
+Just try pixel closest to Halibut Bank buoy, as can adapt code from Travis's vignette
+  (and maybe functionalise it later).
+
+From Travis's oisst.Rmd:
+
+```{r}
+lat <- buoy_metadata$latitude[which(buoy_metadata$name == "Halibut Bank")]
+lon <- buoy_metadata$longitude[which(buoy_metadata$name == "Halibut Bank")]
+
+# create a dataframe and convert to sf object
+coords_halibut_bank <- data.frame(x = lon, y = lat)
+sf_halibut_bank <- sf::st_as_sf(coords_halibut_bank,
+                                coords = c("x", "y"),
+                                crs = "EPSG: 4326")
+sf_halibut_bank
+
+# distance from buoy to each coordinate
+dist <- sf::st_distance(oisst_month, sf_halibut_bank)
+
+# subset data for points that are closest to buoy
+sub.dat <- oisst_month[which(dist == min(dist)),]
+
+sub.dat    # geometry is just the same point repeated I think
+```
+
+Now we can plot the time series for the data we've extracted
+
+```{r, oisstallyears}
+sub.dat %>%
+  mutate(year = as.factor(year)) %>%  # set year to a factor so each line is plotted separately
+  ggplot() +
+  geom_line(aes(x = month, y = sst, col = year)) +
+  scale_y_continuous(name = attributes(oisst_month)$units)
+```
+
+To see where we are this year, let's plot just this year's data, with the
+historical distribution (not evaluating, year 2023 needs updating to
+`max(sub.dat$year)` but didn't work, ignoring).
+
+```{r, oisstoneyear, eval = FALSE, echo = FALSE}
+# calculate summary statistics (median, sd, 0.05 and 0.95 probabilities)
+sum.dat <- sub.dat %>%
+  group_by(month) %>%
+  summarise(median_val = median(sst, na.rm = TRUE),
+            sd_val = sd(sst, na.rm = TRUE),
+            q05 = quantile(sst, probs = 0.05, na.rm = TRUE),
+            q95 = quantile(sst, probs = 0.95, na.rm = TRUE))
+
+sub.dat %>%
+  filter(year == 2023) %>%
+  mutate(year = as.factor(year)) %>%
+  ggplot() +
+  geom_ribbon(data = sum.dat, aes(x = month, ymin = q05, ymax = q95), fill = "grey") +
+  geom_line(aes(x = month, y = sst), col = "red") +
+  geom_line(data = sum.dat, aes(x = month, y = median_val), col = "black", linewidth = 1) +
+  scale_y_continuous(name = attributes(oisst_month)$units)
+```
+
+Now to extract what we need, the annual average over Apr-Jul for each
+year. Adapting from PDO code above (be nice to have a function!):
+
+```{r, oisstavge}
+spring_months <- 4:7
+halibut_bank_spring_months <- dplyr::filter(sub.dat, month %in% spring_months)
+
+# Check the number of samples in each month:
+min(halibut_bank_spring_months$sst_n)     # 30, great.
+
+# Check first year has all four months (i.e. starts in April);
+halibut_bank_spring_months    # Yes it does
+
+halibut_bank_spring <- summarise(group_by(halibut_bank_spring_months,
+                                          year),
+                       year = max(year),
+                       sst_spring = mean(sst)) %>%
+  sf::st_drop_geometry()
+
+halibut_bank_spring
+
+halibut_bank_spring %>% tail()
+
+plot(halibut_bank_spring$year,
+     halibut_bank_spring$sst_spring,
+     type = "o",
+     xlab = "Spring SST",
+     ylab = "Year")
+```
+So no `r end_year` `sst_spring`, which is fine as should not be impacting `r end_year` returns.
+
+
+### Fraser River Discharge
+
+- peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
+  (same as buoy temperatures). Had copied .rda files into data/ here, now just
+  use pacea version.
+
+So again, expect the lag to be two years.
+
+Adapting temperature code from above, this is for mean discharge in spring:
+
+```{r, fraser}
+fraser_months <- 4:6
+
+fraser_discharge_mean     # from pacea
+
+fraser_mean_months <- dplyr::filter(fraser_discharge_mean,
+                                    month %in% fraser_months)
+
+# Check first year has all three months (i.e. starts in April);
+fraser_mean_months    # Yes it does
+
+fraser_mean_in_spring <- summarise(group_by(fraser_mean_months,
+                                         year),
+                        year = unique(year),
+                        fraser_mean_spring = mean(value))
+
+fraser_mean_in_spring
+fraser_mean_in_spring %>% tail()
+
+plot(fraser_mean_in_spring$year,
+     fraser_mean_in_spring$fraser_mean_spring,
+     type = "o",
+     xlab = "Fraser River discharge in spring - mean",
+     ylab = "Year")
+```
+
+And for peak discharge, which is the peak daily value over the spring months.
+
+```{r, fraserpeak}
+fraser_discharge_peak     # from pacea
+
+fraser_peak_months <- dplyr::filter(fraser_discharge_peak,
+                                    month %in% fraser_months)
+
+# Check first year has all three months (i.e. starts in April);
+fraser_peak_months    # Yes it does
+
+fraser_peak_in_spring <- summarise(group_by(fraser_peak_months,
+                                         year),
+                        year = unique(year),
+                        fraser_peak_spring = max(value))
+
+fraser_peak_in_spring
+fraser_peak_in_spring %>% tail()
+
+plot(fraser_peak_in_spring$year,
+     fraser_peak_in_spring$fraser_peak_spring,
+     type = "o",
+     xlab = "Fraser River discharge in spring - peak",
+     ylab = "Year")
+```
+
+### Total Pink Salmon abundance in North Pacific
+
+- total pink salmon abundance in N Pacific. Second or third years of marine
+  life of the sockeye (as competition). Year after the temperature data (second
+  year), so 2020 (for age4 returning in 2021). EDM should hopefully pick up on a
+  lag of 1 year then (maybe 2 years also, for the second year of marine life of
+  the sockeye).
+
+  So the Pinks that are in the ocean in 2020.
+  `np_salmon` has `return_year_of_np_salmon`. So we would want the
+  `return_year_of_np_salmon` to be 2021, as those will be in the ocean in 2020.
+  BUT, that implies `return_year = 2025` sockeye (what we want to predict), we will need the
+  pinks at sea that are also returning in 2025, which we won't have.
+  [Carrie contacting Hannah Hunter also].
+
+The Pink Salmon only spend one year at sea. So can look at pinks returning in
+2020 as interacting at sea in 2019 with the age4 Sockeye returning in 2021, when
+the latter are age2. Ideally would want the pinks returning in 2021, but then to
+predict Sockeye returning in 2025 we would need info on pinks returning in 2025,
+which we do not have.
+
+Now doing just the year here, meaning the `return_year_of_np_salmon`.
+
+Have updated with Brendan's latest (10/6/26), 2024 is updated fromlast year's version, no 2025 yet
+though; calling it `north_pacific_salmon`.
+
+```{r npsalmon}
+north_pacific_salmon
+
+tail(north_pacific_salmon)
+
+max(diff(north_pacific_salmon$return_year_of_np_salmon))   # No gaps
+sum(is.na(north_pacific_salmon$total))                     # No missing values
+```
+Does start in 1925, which is nice. And fully continuous.
+
+Adapting OISST code above, we just want to use the pinks and the total
+salmon, which Brendan has already calculated, so do them together.
+
+```{r, npsalmon2}
+north_pacific_salmon_covariates <- rename(north_pacific_salmon,
+                                          year = return_year_of_np_salmon) %>%
+  select(-c("chum",
+            "sockeye"))
+
+north_pacific_salmon_covariates %>% tail()
+```
+
+### Total salmon abundance in N Pacific
+
+- total salmon abundance in N Pacific. Same as pink. Andy: though won't the
+  non-pinks be out there for longer so we should look at multiple years? Could
+  do but will get complicated and have limited time, could always include lags
+  in EDM analysis.
+
+Done in previous section in the same way, for simplicity.
+
+### Copepods the year of outmigration
+
+Total biomass anomaly in SoG from pacea (same year as SST). So for 2021 returns we use 2019, so for
+2025 we need 2023, which we do have. So again, hopefully EDM picks up a lag of 2
+when we do everything by real year (not return year).
+
+```{r zooplankton}
+zooplankton_sog
+
+zooplankton_sog %>% tail()
+
+zoo <- select(zooplankton_sog,
+              year,
+              total_biomass) %>%
+  rename(zoo_total_biomass = total_biomass)
+
+zoo
+tail(zoo)
+```
+
+### Bifurcation index the year of outmigration
+
+Bifurcation index, year of outmigration, same year as SST (so same as zooplankton).
+So, again, for 2021 returns we use 2019, so for 2025 we need 2023, which we do
+have. Presumably for 2026 we need 2024, which we do have (2025 not been included yet).
+
+Again, hopefully EDM picks up on the lag of 2.
+
+```{r bi}
+bi
+bi %>% tail()
+
+bi_input <- select(bi,
+                   year,
+                   anomaly) %>%
+  rename(bi_anomaly = anomaly)
+
+bi_input
+tail(bi_input)
+```
+
+## Combine covariates into one tibble
+
+```{r, combine}
+fraser_covariates_2026 <- tibble(year = start_year:end_year) %>%
+  left_join(pdo_winter) %>%
+  left_join(halibut_bank_spring) %>%
+  left_join(fraser_mean_in_spring) %>%
+  left_join(fraser_peak_in_spring) %>%
+  left_join(north_pacific_salmon_covariates) %>%
+  left_join(zoo) %>%
+  left_join(bi_input)
+
+fraser_covariates_2026 %>% head() %>% a()
+fraser_covariates_2026 %>% tail() %>% a()
+```
+
+User should then decide what years they require.
+
+## Plots of covariates
+
+Do a big crude plot of everything:
+```{r plotcovariates, fig.height = 9}
+to_plot <- tidyr::pivot_longer(fraser_covariates_2026,
+                               cols = -year) %>%
+  mutate(name = factor(name))
+
+p <- ggplot(to_plot,
+            aes(year, value)) +
+  geom_path() +                        # leaves gaps for NA's, but none now
+  # facet_wrap(~name, scales = "free_y")
+  facet_grid(name ~ ., scales = "free_y")
+
+p
+
+# It reorders them alphabetically; need something like this:
+#  mutate(name = factor(name, levels = paste0("X", 1:12))) %>%
+```
+
+That suggests, to get a long time series, let's first use the covariates that
+span the full time series. [But now the x-axis is year, not return year.]
+
+Full correlation plot (bit hard to see - see the later oen also)
+```{r corrplot}
+# pairs(fraser_covariates_2026,
+#      lower.panel = panel.cor)
+GGally::ggpairs(fraser_covariates_2026)
+```
+
+## Only covariates that span the full time series
+
+Basically, which covariates have values in the first year. Then check they cover
+all years. BUT have not determined what the first year is yet (since don't want
+to pre-empt that for Kaitlyn, Steph etc. with their analyses).
+
+So set the first year that we have age4's to be 1952 (as we did last year based
+on the data). Note that for EDM analyses you will want to go back a few more
+years to account for lags of the covariates impacting the age4's in 1952.
+
+```{r fullspan}
+age4_first_year <- 1952
+age4_first_year_index <- which(fraser_covariates_2026$year == age4_first_year)
+age4_first_year_index
+
+cov_in_first_year <- which(!is.na(fraser_covariates_2026[age4_first_year_index, ]))
+
+cov_in_first_year
+
+names(fraser_covariates_2026)[cov_in_first_year]
+```
+So those are the time series that we have that start from `r age4_first_year`.
+
+Pairs of those will definitely be correlated. But let's see:
+
+```{r, fullspan2}
+fraser_covariates_2026_span <- fraser_covariates_2026[ , cov_in_first_year]
+summary(fraser_covariates_2026_span)    # Still some NA's.
+fraser_covariates_2026_span %>% tail() %>% a()
+
+GGally::ggpairs(fraser_covariates_2026_span)
+```
+
+A clearer plot (coefficients are calculated slightly differently):
+```{r, fullspan3}
+corrplot::corrplot(cor(fraser_covariates_2026_span,
+                       use = "pairwise.complete.obs"),
+  method = "number",
+  type = "upper" # show only upper side
+  )
+```
+
+In Haigh et al. (2019) we used a correlation coefficient between covaraties of
+0.3 to exclude related covariates. Let's do that here. 
+
+Just looking manually at the figure, we can see that should not have, in the
+same analysis (because correlation has magnitude $>0.3$):
+
+- `fraser_mean_spring` and `fraser_peak_spring` (as expected)
+
+- `pink` and `total` (as expected)
+
+- `pdo_winter_mean` and either `fraser_mean_spring` or `fraser_peak_spring`,
+  though if we exclude `fraser_peak_spring` we should keep `pdo_winter_mean`;
+  though fraser values are direct influences so should probably be preferred,
+  but we get PDO values earlier I think.
+
+
+## Save covariates
+
+TODO In 2025 we removed the final row as I think it was messing up EDM because
+it had some NA's. But do that in the analyses.
+
+```{r, save}
+usethis::use_data(fraser_covariates_2026,
+                  overwrite = FALSE)   # Or maybe save your own copy as just an .rds. Change to
+# TRUE if want to resave.
+```
+
+```{r, stop, cache = FALSE}
+knitr::knit_exit()
+```
+
+Do not actually want the final year values, so remove those. Think it was
+messing up the EDM. Was worth doing all years up to here, partly to see if we
+can try and predict two years ahead (i.e. how fleshed out are recent covariates).
+
+
+This is the final `input_age4`:
+```{r, inputage4rev}
+input_age4 <- input_age4_full[-nrow(input_age4_full), ]
+
+input_age4 %>% head() %>% a()
+
+input_age4 %>% tail() %>% a()
+
+summary(input_age4)
+
+T <- nrow(input_age4)   # T as in index T is final year of data, can include
+                        # NA's at start. Not used in calculations, just plotting
+                        # and printing results.
+  #sum(!is.na(input_age4$age4)) # T in EDM speak, final index year of data, but
+                               # now need to account for NA's at the start. So
+                               # do it based on years of age4 values.
+T    # do double check that manually, esp for age5 and other rivers
+
+age4_first_year_index <- min(which(!is.na(input_age4$age4)))
+age4_first_year_index
+
+age4_first_year <- input_age4$year[age4_first_year_index]
+age4_first_year
+```
+
+So only NA's in `sst_spring`, `zoo_total_biomass` and `bi_anomaly`, plus the
+early ones for most variables. The ones in the tail look okay, given we know
+what we expect the lags to be (don't allow MVE to use lags for which we don't
+have the data for the 2025 prediction).
+
+
+# Quick EDM, no covariates (text of later sections based on old inputs, needs updating)
+
+Do a quick pbsEDM as proof of concept and to see what we get.
+
+From `analyse_simple_time_series` vignette.
+
+Try no covariates, iterate over $E$:
+
+```{r, edm2}
+res_univariate <- pbsEDM_Evec(input_age4$age4)
+plot_pbsEDM_Evec(res_univariate,
+                 portrait = FALSE)
+
+plot_rho_Evec(res_univariate)
+```
+Does not have the three-armed structure like our simulated model did in our paper.
+
+Those results suggest $E=5$ when using no covariates, and the prediction for 2025 would
+be the last of these (I think):
+```{r pred1}
+res_univariate[[4]]$results
+
+res_univariate[[4]]$N_forecast
+res_univariate[[4]]$N_forecast[prediction_year_index]
+```
+
+Though the observed and forecast $N$ look quite different:
+```{r obsN}
+plot(res_univariate[[4]]$N_observed,
+     res_univariate[[4]]$N_forecast)
+```
+
+and indeed, `N_rho$ is only `r round(res_univariate[[4]]$results$N_rho, 2)` as
+seen in results above.
+
+Checking the $X$:
+```{r obsX}
+plot(res_univariate[[4]]$X_observed,
+     res_univariate[[4]]$X_forecast)
+```
+
+and indeed, `X_rho$ is only `r round(res_univariate[[4]]$results$X_rho, 2)` as
+seen in the panel plot above.
+
+
+\clearpage
+
+# EDM with covariates
+
+- Do a time series panel plot first of all time series.
+
+- Then do the correlation plot first before truncating (expect it just ignores NA's),
+and add in the correlation coefficient option.
+
+- Now try some covariates, need to understand what is going on here. Lots of
+options though. See multiview embedding also.
+
+- But the method doesn't deal with NA's, and when keeping them in and doing the
+full time series (starting from 1952) seems to just end up with a few years that
+work; this was from doing chunk edm1 before removing NA's, which we're doing
+here now.  Not sure about this now (in `analysis-2025-2.Rmd`).
+
+```{r age4rmNA}
+input_age4 %>% head() %>% a()
+input_age4 %>% tail() %>% a()
+summary(input_age4)
+```
+So we never want a lag of 0 for any covariates (only PDO would actually work for
+making a prediction for 2025, though we've now taken out 2025 values as PDO was
+the only one). Also, can't have lag of 1 for zooplankton, or lag of 2 for either spawners.
+
+
+### Multivariate EDM for the full span values
+
+Updating here, sporadically, based on top lag combination from mve.
+
+(Earlier attempts at truncated time series are saved below, and used as template).
+
+```{r edmspan1}
+res_span1 <- pbsEDM(input_age4_span,
+                    lags = list(age4 = c(0, 5),
+                                # pdo_winter_mean = 0,
+                                # fraser_mean_spring = 0,
+                                pink = 1),
+                    first_difference = TRUE,
+                    centre_and_scale = TRUE)
+
+res_span1$results
+plot(res_span1, portrait = FALSE)  # technically not correct
+```
+
+This looked okay for multivariate. But multiview (below) it's better for EDM to
+deal with the lags (and we have that automated already, and getting short of time).
+
+$\rho$ here is very slightly different to version 2 (even though data haven't
+changed - expect it's to do with the NA's, oh, and going back a bit further with
+the pinks; though RMSE is the same). Don't worry too much.
+
+Need to systematically go through the different options. Look at Luke's lag
+function. Though we already have that working for multiview embedding, so let's
+just use that. Can always try top lag choice back in multivariate.
+
+
+### Multiview for simulated values
+
+The following worked from `mve_understanding.Rmd` vignette in pbsEDM, to use as
+a template:
+
+It's all working okay. Try shebang one again with longer simulated data and more
+lags. Though the actual top rho values shouldn't change from shebang; the values
+are calculated in the function now.
+
+```{r shebang2, eval = FALSE}
+set.seed(42)
+h_simulated <- 0.1095 + sample(1:180) * 0.001 # has mean of 0.2
+simulated_4 <- EDMsimulate::salmon_sim(h = h_simulated)
+
+lags_use_multi <- list(R_t = 0,
+                       S_t = 0:3)
+
+lags_lots <- list(R_t = 0:4,
+                  S_t = 0:8)
+
+mve_full_shebang_2 <- multiview_embedding(data = simulated_4,
+                                          response = "R_t",
+                                          lags = lags_lots)  # Do lags_use_multi
+                                            # for shorter and quicker one (instantaneous);
+                                            # lags_lots for longer, a few minutes
+mve_full_shebang_2$rho_prediction_from_mve
+mve_full_shebang_2$rho_each_top_subset
+```
+
+Wow, fascinating. The overall $\rho$ for mve, averaging over the top subsets, is
+higher than every $\rho$ from every subset! So the averaging is indeed paying
+off, and improving results. Other results are:
+
+```{r shebang2res, eval = FALSE}
+mve_full_shebang_2$lags_of_top_subsets  # These are in order of highest rho
+mve_full_shebang_2$response_predicted_from_mve   # Overall mve prediction, including
+                                            # for the forecast T+1.
+```
+
+Also, for calculating number of lag combinations to test:
+Number of 5-dimensional combinations (?) is
+```{r combinations}
+choose(10, 1:10)
+choose(10, 1:10) %>% sum()
+choose(10, 1:10) %>% sum() %>% sqrt()
+```
+So that's manageable.
+
+Should calculate $\rho$ only on what we care about, i.e. `R_t`.
+
+
+### Multiview embedding for the span values
+
+So, let's use multiview, and think about the lags. Can define the lags here. Since it
+ignores other covariates, we don't need to create subsets of the data when
+removing a correlated covariate.
+
+Not sure if age4 lag of 0 should be in first line here - it
+is for the example in pbsEDM, but then gets included in fitting. So not including it here,
+then maybe trying. Okay, various different options:
+
+For version 3 not changing these (even though we now have spawners also); still
+don't see how we can use 0 lag of age4 though. Then adapting the bigger MVE analysis.
+
+\clearpage
+
+
+**1) No 0 lag of age4, 0 lag of PDO.**
+
+Though not sure how it would use that in
+prediction for 2025 (since haven't included that value now).
+
+```{r, span1}
+lags_span1 <- list(age4 = c(4, 5), # I guess 5 years back could relate to age5.
+                   pdo_winter_mean = c(0, 1, 2), # expect 2
+                   fraser_mean_spring = c(1, 2), # expect 2
+                   pink = c(1, 2))
+
+mve_span1 <- multiview_embedding(data = input_age4_span,
+                                 response = "age4",
+                                 lags = lags_span1)
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+
+mve_span1$rho_prediction_from_mve
+mve_span1$rho_each_top_subset
+
+mve_span1$lags_of_top_subsets  # These are in order of highest rho
+mve_span1$response_predicted_from_mve   # Overall mve prediction, including
+                                            # for the forecast T+1.
+```
+
+```{r quickcompare}
+
+
+```{r span1fig}
+plot(input_age4_span$age4,
+     mve_span1$response_predicted_from_mve[-(T+1)],
+     xlab = "Age4 returns - observed",
+     ylab = "Age4 returns - predicted")
+
+legend("topleft", legend = c(paste("rho is",
+                                    round(mve_span1$rho_prediction_from_mve, 2)),
+                              paste("prediction is",
+                                    f(mve_span1$response_predicted_from_mve[T+1]))))
+abline(a = 0, b = 1)
+abline(h = mve_span1$response_predicted_from_mve[T+1], col = "red")
+```
+
+**2) No 0 lag of age4, no 0 lag of PDO.**
+
+```{r, span2}
+lags_span2 <- list(age4 = c(4, 5),     # I guess 5 years back could relate to
+                                       # age5. Andy removed 0 lag here.
+                   pdo_winter_mean = c(1, 2),   # expect 2
+                   fraser_mean_spring = c(1, 2), # expect 2
+                   pink = c(1, 2))               # expect 2, maybe 1 also.
+
+mve_span2 <- multiview_embedding(data = input_age4_span,
+                                 response = "age4",
+                                 lags = lags_span2)
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+
+mve_span2$rho_prediction_from_mve
+mve_span2$rho_each_top_subset
+
+mve_span2$lags_of_top_subsets  # These are in order of highest rho
+mve_span2$response_predicted_from_mve   # Overall mve prediction, including
+                                            # for the forecast T+1.
+```
+
+```{r span2fig}
+plot(input_age4_span$age4,
+     mve_span2$response_predicted_from_mve[-(T+1)],
+     xlab = "Age4 returns - observed",
+     ylab = "Age4 returns - predicted")
+
+legend("topleft", legend = c(paste("rho is",
+                                    round(mve_span2$rho_prediction_from_mve, 2)),
+                              paste("prediction is",
+                                    f(mve_span2$response_predicted_from_mve[T+1]))))
+abline(a = 0, b = 1)
+abline(h = mve_span2$response_predicted_from_mve[T+1], col = "red")
+```
+
+<!-- Prediction for $T+1$ is `r f(mve_span2$response_predicted_from_mve[T+1])`. -->
+
+**3) 0 lag of age4, 0 lag of PDO.**
+
+Though not sure how it would use that in
+prediction for 2025 (since haven't included that value now).
+
+```{r, span3}
+lags_span3 <- list(age4 = c(0, 4, 5), # I guess 5 years back could relate to age5.
+                   pdo_winter_mean = c(0, 1, 2), # expect 2
+                   fraser_mean_spring = c(1, 2), # expect 2
+                   pink = c(1, 2))
+
+mve_span3 <- multiview_embedding(data = input_age4_span,
+                                 response = "age4",
+                                 lags = lags_span3)
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+
+mve_span3$rho_prediction_from_mve
+mve_span3$rho_each_top_subset
+
+mve_span3$lags_of_top_subsets  # These are in order of highest rho
+mve_span3$response_predicted_from_mve   # Overall mve prediction, including
+                                            # for the forecast T+1.
+```
+
+```{r span3fig}
+plot(input_age4_span$age4,
+     mve_span3$response_predicted_from_mve[-(T+1)],
+     xlab = "Age4 returns - observed",
+     ylab = "Age4 returns - predicted")
+
+legend("topleft", legend = c(paste("rho is",
+                                    round(mve_span3$rho_prediction_from_mve, 2)),
+                              paste("prediction is",
+                                    f(mve_span3$response_predicted_from_mve[T+1]))))
+abline(a = 0, b = 1)
+abline(h = mve_span3$response_predicted_from_mve[T+1], col = "red")
+```
+
+
+$\rho$ is `r round(mve_span3$rho_prediction_from_mve, 2)` .
+
+Prediction for $T+1$ is `r round(mve_span3$response_predicted_from_mve[T+1])`.
+
+**4) 0 lag of age4, no 0 lag of PDO.**
+
+Though not sure how it would use that in
+prediction for 2025 (since haven't included that value now).
+
+```{r, span4}
+lags_span4 <- list(age4 = c(0, 4, 5), # I guess 5 years back could relate to age5.
+                   pdo_winter_mean = c(1, 2), # expect 2
+                   fraser_mean_spring = c(1, 2), # expect 2
+                   pink = c(1, 2))
+
+mve_span4 <- multiview_embedding(data = input_age4_span,
+                                 response = "age4",
+                                 lags = lags_span4)
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+
+mve_span4$rho_prediction_from_mve
+mve_span4$rho_each_top_subset
+
+mve_span4$lags_of_top_subsets  # These are in order of highest rho
+mve_span4$response_predicted_from_mve   # Overall mve prediction, including
+                                            # for the forecast T+1.
+```
+
+```{r span4fig}
+plot(input_age4_span$age4,
+     mve_span4$response_predicted_from_mve[-(T+1)],
+     xlab = "Age4 returns - observed",
+     ylab = "Age4 returns - predicted")
+
+legend("topleft", legend = c(paste("rho is",
+                                    round(mve_span4$rho_prediction_from_mve, 2)),
+                              paste("prediction is",
+                                    f(mve_span4$response_predicted_from_mve[T+1]))))
+abline(a = 0, b = 1)
+abline(h = mve_span4$response_predicted_from_mve[T+1], col = "red")
+```
+
+
+
+**5) Lots of lags of everything**
+
+Give a lot of options (to run over lunch). Took a few hours but failed at the
+.tex build, I think because it prints out lots and lots of lags. So not
+rerunning but just showing the start of the results.
+
+```{r, span5, eval = FALSE}
+lags_span5 <- list(age4 = c(0, 1, 2, 3, 4, 5),
+                   pdo_winter_mean = c(1, 2, 3, 4), # expect 2
+                   fraser_mean_spring = c(1, 2, 3, 4), # expect 2
+                   pink = c(1, 2, 3, 4))
+
+mve_span5 <- multiview_embedding(data = input_age4_span,
+                                 response = "age4",
+                                 lags = lags_span5)
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+
+mve_span5$rho_prediction_from_mve
+mve_span5$rho_each_top_subset
+
+mve_span5$lags_of_top_subsets  # These are in order of highest rho
+mve_span5$response_predicted_from_mve   # Overall mve prediction, including for T+1.
+
+saveRDS(mve_span5, file = "mve_span5.rds")
+```
+
+```{r, span5load, eval = FALSE}
+mve_span5 <- readRDS("mve_span5.rds")
+
+mve_span5$rho_prediction_from_mve
+mve_span5$rho_each_top_subset
+
+# So there's 512, so need to just show a few of these:
+mve_span5$lags_of_top_subsets[1:20]
+
+mve_span5$response_predicted_from_mve   # Overall mve prediction, including for T+1.
+```
+
+age4 with lag 0 is in the top 9 of those, and in 16 of the top 20. So should
+retry without those.
+
+```{r span5fig, eval = FALSE}
+plot(input_age4_span$age4,
+     mve_span5$response_predicted_from_mve[-(T+1)],
+     xlab = "Age4 returns - observed",
+     ylab = "Age4 returns - predicted")
+
+legend("topleft", legend = c(paste("rho is",
+                                    round(mve_span5$rho_prediction_from_mve, 2)),
+                              paste("prediction is",
+                                    f(mve_span5$response_predicted_from_mve[T+1]))))
+abline(a = 0, b = 1)
+abline(h = mve_span5$response_predicted_from_mve[T+1], col = "red")
+```
+
+**6) Lots of lags of everything, except no 0 of age4 (or anything)**
+
+Rerunning with NA's
+removed when averaging over all SVE's (previous NA removal was the untransform
+minimum replacement issue), so should have predictions for (probably)
+all age4's (before we were excluding early years for which one of the SVEs did
+not have all the data, as mean was not excluding NA's in `multiview_embedding()`.
+
+```{r, span6}
+lags_span6 <- list(age4 = c(1, 2, 3, 4, 5),
+                   pdo_winter_mean = c(1, 2, 3, 4), # expect 2
+                   fraser_mean_spring = c(1, 2, 3, 4), # expect 2
+                   pink = c(1, 2, 3, 4))
+
+mve_span6 <- multiview_embedding(data = input_age4_span,
+                                 response = "age4",
+                                 lags = lags_span6)
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+
+mve_span6$rho_prediction_from_mve
+mve_span6$rho_each_top_subset
+
+mve_span6$lags_of_top_subsets  # These are in order of highest rho
+mve_span6$response_predicted_from_mve   # Overall mve prediction, including for T+1.
+
+saveRDS(mve_span6, file = "mve_span6.rds")
+```
+
+```{r, span6load}
+mve_span6 <- readRDS("mve_span6.rds")
+
+mve_span6$rho_prediction_from_mve
+mve_span6$rho_each_top_subset
+
+# So there's 512, so need to just show a few of these:
+mve_span6$lags_of_top_subsets[1:20]
+
+# Look at the top few predictions:
+
+mve_span6[["response_each_subset"]][mve_span6$top_subsets_for_rho_index[1:5]]
+
+mve_span6$response_predicted_from_mve   # Overall mve prediction, including for T+1.
+```
+
+Was true, but not updating span5 now since fixing NA issue in pbsEDM. Can actually see that top one here was the 10th one in span5:
+```{r comparespan56, eval = FALSE}
+mve_span6$rho_each_top_subset[1]
+mve_span5$rho_each_top_subset[10]
+```
+which makes sense.
+
+```{r span6fig}
+plot(input_age4_span$age4,
+     mve_span6$response_predicted_from_mve[-(T+1)],
+     xlab = "Age4 returns - observed",
+     ylab = "Age4 returns - predicted")
+
+legend("topleft", legend = c(paste("rho is",
+                                    round(mve_span6$rho_prediction_from_mve, 2)),
+                              paste("prediction is",
+                                    f(mve_span6$response_predicted_from_mve[T+1]))))
+abline(a = 0, b = 1)
+abline(h = mve_span6$response_predicted_from_mve[T+1], col = "red")
+```
+
+**Just try span6 best model as multivariate EDM - not doing, keeping code**
+
+Though need to include lag 0 also for the thing we're predicting.
+
+```{r, span6multivariate, eval = FALSE, echo = FALSE}
+mve_span6$lags_of_top_subsets[1]
+
+multivariate_span6 <- pbsEDM(input_age4_span,
+                      lags = list(age4 = c(0, 1, 3, 4),
+                                  # pdo_winter_mean = 0,
+                                  fraser_mean_spring = c(1, 4),
+                                  pink = c(1, 3)),
+                      first_difference = TRUE,
+                      centre_and_scale = TRUE)
+
+multivariate_span6$results
+plot(multivariate_span6, portrait = FALSE)  # technically not correct
+f(multivariate_span6$N_forecast[T+1])
+```
+
+$\rho$ based on $N$ came out lower than for span6, so stick with that. Worth
+taking a look. Not sure why it's less than what is listed in span6 though. Ah,
+it's only doing a few nearest neighbours, MVE does them all I think. Prediction
+for $N$ is still low though, way under a million, similar to a couple of others.
+
+
+**7) Lots of lags of everything, except no 0 of anything or lag 5 of age4 (since 1
+and 5 came up in top five SVEs for span6 above**
+
+Calcs took a while, so manually saving. (It failed when printing all the lags, which
+I've fixed now).
+
+```{r, span7}
+if(FALSE){   # Want to redo chunk but not redo calc; tidy up when use as future
+             # template for span8
+  lags_span7 <- list(age4 = c(1, 2, 3, 4),
+                     pdo_winter_mean = c(1, 2, 3, 4), # expect 2
+                     fraser_mean_spring = c(1, 2, 3, 4), # expect 2
+                     pink = c(1, 2, 3, 4))
+
+  mve_span7 <- multiview_embedding(data = input_age4_span,
+                                   response = "age4",
+                                   lags = lags_span7)
+  # Centre and scaling and first differencing get done automatically, in
+  #  state_space_reconstruction_for_sve()
+
+  mve_span7$rho_prediction_from_mve
+  mve_span7$rho_each_top_subset
+
+  mve_span7$lags_of_top_subsets[1:20]  # These are in order of highest rho
+  mve_span7$response_predicted_from_mve   # Overall mve prediction, including for T+1.
+
+  saveRDS(mve_span7, file = "mve_span7.rds")
+}
+
+```
+
+```{r, span7load}
+mve_span7 <- readRDS("mve_span7.rds")
+
+mve_span7$rho_prediction_from_mve
+mve_span7$rho_each_top_subset
+
+# So there's lots, so need to just show a few of these:
+mve_span7$lags_of_top_subsets[1:20]
+
+# Look at the top few predictions:
+
+mve_span7[["response_each_subset"]][mve_span7$top_subsets_for_rho_index[1:5]]
+
+mve_span7$response_predicted_from_mve   # Overall mve prediction, including for T+1.
+```
+
+```{r span7fig}
+plot(input_age4_span$age4,
+     mve_span7$response_predicted_from_mve[-(T+1)],
+     xlab = "Age4 returns - observed",
+     ylab = "Age4 returns - predicted")
+
+legend("topleft", legend = c(paste("rho is",
+                                    round(mve_span7$rho_prediction_from_mve, 2)),
+                              paste("prediction is",
+                                    f(mve_span7$response_predicted_from_mve[T+1]))))
+abline(a = 0, b = 1)
+abline(h = mve_span7$response_predicted_from_mve[T+1], col = "red")
+```
+
+
+
+**8)Then try including other covariates that don't span full time series**
+
+Want to include zooplankton. Just try it at first, and see if MVE just teases
+anything out, ignoring years with no zooplankton data for the relevant SVEs
+(giving NAs are now dealt with better in the code). Calling variables `full8`,
+incrementing from `span7`. And add spawners, which I hadn't done yet.
+
+Just trying a few to see if it works. Then copy back in similar lags to what was
+used for span7.
+
+Timings. Each extra lag should be $2^XX$ longer.
+
+9 lags - 3.8 seconds
+
+12 lags - 21 seconds (8 times longer, makes sense.
+
+14 lags - 90 seconds (makes sense, four times longer, ish)
+
+16 lags - should be about 320 seconds, 5 minutes.
+
+17 lags - took 720 seconds, 12 minutes.
+
+```{r, full8}
+lags_full8 <- list(age4 = c(1, 2, 3, 4),
+                   effective_spawners = c(4),
+                   pdo_winter_mean = c(1, 2),
+                   fraser_mean_spring = c(1, 2),
+                   pink = c(1, 2),
+                   sst_spring = c(1, 2),
+                   zoo_total_biomass = c(1, 2),
+                   bi_anomaly = c(1, 2))
+tictoc::tic()
+mve_full8 <- multiview_embedding(data = input_age4,   # not span
+                                 response = "age4",
+                                 lags = lags_full8)
+# Centre and scaling and first differencing get done automatically, in
+#  state_space_reconstruction_for_sve()
+tictoc::toc()
+
+saveRDS(mve_full8, file = "mve_full8.rds")
+```
+
+```{r, full8load}
+mve_full8 <- readRDS("mve_full8.rds")
+
+mve_full8$rho_prediction_from_mve
+mve_full8$rho_each_top_subset
+
+# So there's lots, so need to just show a few of these:
+mve_full8$lags_of_top_subsets[1:20]
+
+# Look at the top few predictions:
+
+mve_full8[["response_each_subset"]][mve_full8$top_subsets_for_rho_index[1:5]]
+
+mve_full8$response_predicted_from_mve   # Overall mve prediction, including for T+1.
+```
+
+```{r full8fig}
+plot(input_age4$age4,
+     mve_full8$response_predicted_from_mve[-(T+1)],
+     xlab = "Age4 returns - observed",
+     ylab = "Age4 returns - predicted")
+
+legend("topleft", legend = c(paste("rho is",
+                                    round(mve_full8$rho_prediction_from_mve, 2)),
+                              paste("prediction is",
+                                    f(mve_full8$response_predicted_from_mve[T+1]))))
+abline(a = 0, b = 1)
+abline(h = mve_full8$response_predicted_from_mve[T+1], col = "red")
+```
+
+### Save covariates to use elsewhere
+
+All this was just for Chilko. So save the non-Chilko-specific covariates to use
+for other stocks (and age5 analysis).
+
+```{r, saveinputage4}
+fraser_covariates <- input_age4 %>%
+  select(-c("age4",
+            "effective_spawners",
+            "total_spawners"))
+
+
+```
+
+
+```{r exit5, cache = FALSE}
+knitr::knit_exit()
+```
+
+
+### Summary (needs updating)
+UPDATE:
+
+So far span6 MVE is best, has highest $\rho$ and does not have age4 (or anything)
+with lag of 0, which we cannot use for prediction.
+
+Interesting that all the predictions seem relatively low, though maybe they're extracting
+the same main sets of lags? Bit hard to compare (a figure would be useful, or a
+table).
+
+
+### More notes
+
+Can also see other methods in pbsEDM/R.
+
+THere is more after this, just exiting to get running.
+
+```{r exit2, cache = FALSE}
+knitr::knit_exit()
+```
+
+
+
+### This was looking at the continuity of some of the time series, and doing a shorter timespan
+
+So PDO is okay, need to look into others:
+```{r age4rmNA2}
+input_age4$sst_spring
+
+input_age4$zoo_total_biomass
+
+input_age4$bi_anomaly
+```
+
+So looks like it makes sense to start the analysis from the first year of
+zooplankton data:
+```{r age4rmNA3}
+start_ind <- min(which(!is.na(input_age4$zoo_total_biomass)))
+start_year <- input_age4$return_year[start_ind]
+start_year
+
+input_age4_truncated <- filter(input_age4,
+                               return_year >= start_year)
+input_age4_truncated
+summary(input_age4_truncated)
+
+plot(input_age4_truncated)
+```
+
+So now only have NA's in SST. Just ignore that data set for now and see what
+multivariate EDM gives. So only 27 years of data, but 3 covariates, plus lags of
+age4 (oh, but maybe exclude those, or include the lagged values we need somehow;
+TODO maybe have to add a few years back for everything, and any NA's will get ignored).
+
+The plot shows that `buoy_sst_otter` may indeed be having an influence (colder
+is better). Gives motivation to back to the above, and quickly go through SST
+for the third buoy, East Dellwood Knolls, in case that looks better and has less
+NA's. No it doesn't, so now going back up to Otter buoy and just replacing the
+few NA's we need with means of adjacent years; not ideal, but a simple fix.
+
+
+This analysis does not include the SST (since have to deal with the NA's, and
+first going back up to look at the East Dellwood Knolls buoy).
+```{r edm1}
+res <- pbsEDM(input_age4_truncated,
+              lags = list(age4 = c(0, 4, 5),
+                          pdo_winter_mean = 0,
+                          # buoy_sst_otter = 0,
+                          zoo_total_biomass = 0,
+                          bi_anomaly = 0),
+              first_difference = TRUE,
+              centre_and_scale = TRUE)
+
+res$results
+plot(res, portrait = FALSE)  # technically not correct
+```
+
+So $\rho$ is actually negative :o
+
+Try no lags of age4:
+```{r edm2a}
+res2 <- pbsEDM(input_age4_truncated,
+               lags = list(age4 = 0,
+                          pdo_winter_mean = 0,
+                          # buoy_sst_otter; = 0,
+                          zoo_total_biomass = 0,
+                          bi_anomaly = 0),
+              first_difference = TRUE,
+              centre_and_scale = TRUE)
+
+res2$results
+# plot(res2, portrait = FALSE)  # technically not correct, though only the time
+                              # series I think
+plot(res2$N_observed, res2$N_forecast)
+```
+
+So $\rho$ is even worse.
+
+
+```{r exit, cache = FALSE}
+knitr::knit_exit()
+```
+
+## Multiview embedding
+
+From `mve_understanding` sort-of-vignette:
+```{r mve}
+lags_for_mve <- list(age4 = 1:5,   # 0 gives an error, whih makes sense as the response
+                     at_sea_abundance = 0,
+                     pdo_winter_mean = 0)
+mve_full <- multiview_embedding(data = input_age4,
+                                response = "age4",
+                                lags = lags_for_mve)
+
+# These look to be useful:
+
+mve_full$top_subsets_for_rho_index
+mve_full$rho_each_top_subset
+mve_full$lags_of_top_subsets
+
+mve_full$response_predicted_from_each_top_subset %>% tail()  # Note that row 74,
+                                        # prediction_year_index, has two the
+                                        # same (for age4=1:2 in lags).
+
+mve_full$rho_prediction_from_mve
+
+mve_full$response_predicted_from_mve
+
+mve_full$response_predicted_from_mve[prediction_year_index]  # The year of interest
+
+```
+
+Last one has NA from just one prediction. It's this:
+`
+[[9]]$at_sea_abundance
+[1] 0
+
+[[9]]$pdo_winter_mean
+[1] 0
+`
+so excluding any age 4. Should still be able to give a prediction though.
+
+Could do this, but think it's meant to be weighted. Have to dig into the code:
+```{r mean}
+mean(mve_full$response_predicted_from_each_top_subset[prediction_year_index,],
+     na.rm = TRUE)
+```
+Plus there are lots of NA's in earlier predictions also, so need to figure that out.
+
+Look into how it picks the top embeddings.
