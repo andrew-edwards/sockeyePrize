@@ -365,7 +365,7 @@ north_pacific_salmon
 tail(north_pacific_salmon)
 
 max(diff(north_pacific_salmon$return_year_of_np_salmon))   # No gaps
-sum(is.na(north_pacific_salmon$total))                     # No missing values
+sum(is.na(north_pacific_salmon$total_ocean_salmon))                     # No missing values
 ```
 Does start in 1925, which is nice. And fully continuous.
 
@@ -529,7 +529,7 @@ same analysis (because correlation has magnitude $>0.3$):
 
 - `fraser_mean_spring` and `fraser_peak_spring` (as expected)
 
-- `pink` and `total` (as expected)
+- `pink` and `total_ocean_salmon` (as expected)
 
 - `pdo_winter_mean` and either `fraser_mean_spring` or `fraser_peak_spring`,
   though if we exclude `fraser_peak_spring` we should keep `pdo_winter_mean`;
@@ -544,7 +544,7 @@ it had some NA's. But do that in the analyses.
 
 ```{r, save}
 usethis::use_data(fraser_covariates_2026,
-                  overwrite = FALSE)   # Or maybe save your own copy as just an .rds. Change to
+                  overwrite = TRUE)   # Or maybe save your own copy as just an .rds. Change to
 # TRUE if want to resave.
 ```
 

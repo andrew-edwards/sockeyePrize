@@ -1,0 +1,94 @@
+---
+title: "Wrangling North Pacific Salmon data - 2026 update"
+author: "Andrew Edwards and Carrie Holt"
+output: pdf_document
+fontsize: 12pt
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r, setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "",
+  cache = FALSE,
+  # cache_path = "data-2025-cache/",
+  # fig.path = "data-2025-figs-cache/",
+  fig.width = 7,
+  fig.height = 6
+)
+  # comment = "#>",
+```
+
+```{r, build, echo = FALSE, eval = FALSE}
+# To build either run this line or click knit button in RStudio:
+rmarkdown::render("north-pacific-salmon-2026.Rmd")
+```
+
+```{r, packages, echo = FALSE}
+library(dplyr)
+load_all()
+```
+
+Updating for 2025, and saving data object as `north_pacific_salmon` instead of
+`np_salmon`. 
+
+Updated from `north-pacific-salmon.Rmd`.
+
+From Brendan (30/4/25 email to Carrie):
+
+"The attached are the most up to date data and best citation would be: Connors, B., Ruggerone, G.T. and Irvine, J.R., 2025. Adapting management of Pacific salmon to a warming and more crowded ocean. ICES Journal of Marine Science, 82(1), p.fsae135."
+
+From the spreadsheet:
+
+"data through 2015 taken from Ruggerone, G.T. and Irvine, J.R., 2018. Numbers
+and biomass of natural and hatchery origin pink salmon, chum salmon, and sockeye
+salmon in the North Pacific Ocean, 1925-2015. Marine and Coastal Fisheries,
+10(2), pp.152-168. "
+
+2016-2023 updated using same methods.
+
+2024: crude estimate of pinks; 5 year average for chum and sockeye (presumably
+would want to update for a formal paper, this is fine for our purposes).
+
+From Brendan (10/10/26 email), summarising:
+
+No 2025 update to time series yet, but attached is the most up to date dataset
+through 2024 which may have some slight tweaks compared to previous file I
+shared for values post 2015, including much more confident estimates in 2024. 
+Can pass along 2025 estimates later this summer once commercial catch by nation is published by NPAFC.
+
+# Data loading
+
+
+```{r, datapreparation}
+data_dir <- paste0(here::here(),
+                   "/data-raw/")
+
+total_raw <- read.csv(paste0(data_dir,
+                             "total_np_salmon-2026-06-10.csv")) %>%
+  tibble::as_tibble()
+
+north_pacific_salmon <- mutate(total_raw,
+                    return_year_of_np_salmon = Return.Year,
+                    pink = Pink,
+                    chum = Chum,
+                    sockeye = Sockeye,
+                    total_ocean_salmon = Total) %>%
+  select(return_year_of_np_salmon,
+         pink,
+         chum,
+         sockeye,
+         total_ocean_salmon)
+
+north_pacific_salmon
+
+tail(north_pacific_salmon)
+
+summary(north_pacific_salmon)
+```
+
+Save data in package:
+```{r, savedata}
+usethis::use_data(north_pacific_salmon,
+                  overwrite = TRUE)
+```
