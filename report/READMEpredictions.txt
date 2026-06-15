@@ -10,14 +10,46 @@ late_stuart_simplified/.
 
 Starting a report-2026/ to then share with Kaitlyn and Stephanie etc.
 
-D Move late_stuart_simplified to there (with folder structure) once done. To
-Columbia 2026 as thats' the only new data we currently have, so will get the
-years correct. I think.
-D Do fraser-covariates-2026.Rmd there to create fraser_covariates_2026 data object in
-   package, simplified down from report/analysis-2025-3.Rmd that was used in
-  2025. 
-- Columbia predictions: 
-- move this part to main README
+Results for Salmon Prize 2026
+*****************************
+
+Predictions from our analyses are:
+Bonneville: 522,618
+Okanagan:   435,309
+Wenatchee:  126,838
+
+They actually want:
+All of Columbia: 1,084,765
+Okanagan:   435,309
+Wenatchee:  126,838
+
+Write up for 2026:
+
+Multiview embedding with environmental covariates
+
+We used multiview embedding, a form of empirical dynamic modelling. Rather than
+define mechanistic models, the approach translates time series of data into a
+path through a multi-dimensional space, whose axes are lagged values of the
+variables. We modelled each stock separately, and included various relevant
+environmental covariates. As for last year, we did not have time to refine the
+details once we had things running.
+
+All code is available at https://github.com/andrew-edwards/sockeyePrize, though
+is not easily usable by anyone else at the moment and there are various
+improvements we would make. Most of the covariates were taken from our pacea R package.
+
+Edwards A.M, Rogers L.A., and Holt C.A. (2024). Explaining empirical dynamic
+modelling using verbal, graphical and mathematical approaches. Ecology and
+Evolution, 14:e10903, 1-12. https://doi.org/10.1002/ece3.10903
+
+Edwards A.M., Tai T.C., Watson J., Peña M.A., Hilborn A., Hannah C.G., Rooper
+C.N., Flynn K.L., and Oldford, G.L. (2024). pacea: An R package of Pacific
+ecosystem information to help facilitate an ecosystem approach to fisheries
+management. https://github.com/pbs-assess/pacea  https://zenodo.org/doi/10.5281/zenodo.13840804
+
+Ye H., and Sugihara, G. (2016). Information leverage in interconnected
+ecosystems: overcoming the curse of dimensionality. Science,
+353:922-925. https://doi.org/10.1126/science.aag0863.
 
 -----
 
@@ -131,7 +163,7 @@ https://www.youtube.com/@SalmonPrize
 
 
 
-Write up of methods (copied for salmonprize entry, and adapted for our README):
+Write up of methods (copied for salmonprize entry 2025, and adapted for our README):
 
 Multiview embedding with environmental covariates
 

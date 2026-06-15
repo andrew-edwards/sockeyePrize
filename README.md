@@ -1,8 +1,9 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file. -->
+
 <!-- which builds the .html that can be viewed locally (but isn't pushed to GitHub;
 GitHub uses README.md to make the page you see on GitHub). See pacea if want to
-save figures.
+gsave figures.
 -->
 
 # sockeyePrize
@@ -61,6 +62,47 @@ implement some of the methods of empirical dynamic modelling.
 Ye H., and Sugihara, G. (2016). Information leverage in interconnected
 ecosystems: overcoming the curse of dimensionality. Science,
 353:922-925. <https://doi.org/10.1126/science.aag0863>.
+
+## 2026 Salmon Prize competition
+
+### Data wrangling
+
+Data are wrangled and saved in the package as follows:
+
+data-raw/data-2026.Rmd - wrangling the data from salmon pri\`e people,
+only Columbia so far.
+
+data-raw/north-pacific-salmon.Rmd - at-sea North Pacific Salmon data
+from Brendan Connors.
+
+data-raw/covariates-2026/fraser-covariates-2026.Rmd - covariate data
+from pacea and north-pacific-salmon.Rmd above, saves data object into
+package, to then use for analysis.
+
+### Analyses using EDM with our pbsEDM package
+
+Only done for Columbia River so far, but this can be used as a template
+for Stephanie, Bruno, Kaitlyn, and Jessie. And anyone else.
+
+report-2026/columbia/bonneville/columbia-analysis.Rmd (for the other two
+rivers in the other directory the river variable is just changed)
+
+Analyses are a little brute force, we have not really had time to
+further think about the ecosystem variables or settings, just happy to
+get data wrangled and methods working. BUT, this should prove a useful
+template for you to apply with more thought for your own analyses.
+
+Columbia data is all we have at the moment for the salmon prize
+competition, hence the focus on that stock. This code is tidied up from
+last year’s.
+
+See report/READMEpredictions.txt for details from 2025, though the
+update code is far more understandable.
+
+One great improvement would be to have a graphical representation of
+which lagged variables get included in the top subsets in the multiview
+embedding analyses (see columbia-analysis.pdf). We have more ideas also
+to refine and improve these techniques, we just have not had time.
 
 ## Installation
 
