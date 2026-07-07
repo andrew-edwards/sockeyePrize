@@ -83,8 +83,10 @@ ecosystems: overcoming the curse of dimensionality. Science,
 
 Data are wrangled and saved in the package as follows:
 
-data-raw/data-2026.Rmd - wrangling the data from salmon pri`e people, only Columbia so
-far.
+data-raw/data-2026.Rmd - wrangling the data from salmon prize people, only
+Columbia in this.
+
+data-raw/data-2026-fraser.Rmd - Fraser River data.
 
 data-raw/north-pacific-salmon.Rmd - at-sea North Pacific Salmon data from
 Brendan Connors.
@@ -94,20 +96,23 @@ data-raw/covariates-2026/fraser-covariates-2026.Rmd - covariate data from pacea 
 
 ### Analyses using EDM with our pbsEDM package
 
-Only done for Columbia River so far, but this can be used as a template for
+First for Columbia River as that data came first, then Fraser (we were away for
+the Alaska stocks). This code is tidied up from last year's and can be used as a template for
 Stephanie, Bruno, Kaitlyn, and Jessie. And anyone else.
 
 report-2026/columbia/bonneville/columbia-analysis.Rmd  (for the other two rivers
   in the other directory the river variable is just changed)
+
+report-2026/fraser/chilko-fraser-analysis.Rmd then copy others into the
+respective directories changing the river variable, and maybe doing some
+thinking. Copying the Columbia one as it was simplified, but then using the
+Fraser River variables that we used for 2025.
 
 Analyses are a little brute force, we have not really had time to further think
 about the ecosystem variables or settings, just happy to get data wrangled and
 methods working.
 BUT, this should prove a useful
 template for you to apply with more thought for your own analyses.
-
-Columbia data is all we have at the moment for the salmon prize competition,
-hence the focus on that stock. This code is tidied up from last year's.
 
 See report/READMEpredictions.txt for details from 2025, though the update code
 is far more understandable.
