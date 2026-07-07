@@ -1,0 +1,66 @@
+---
+title: "Wrangling the salmon data provided for 2026 SalmonPrize competition -
+Fraser River"
+author: "Andrew Edwards and Carrie Holt"
+output: pdf_document
+fontsize: 12pt
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r, setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "",
+  cache = TRUE,
+  cache_path = "data-2026-fraser-cache/",
+  fig.path = "data-2026-fraser-figs-cache/",
+  fig.width = 7,
+  fig.height = 6
+)
+# comment = "#>",
+knitr::dep_prev()
+```
+
+```{r, build, echo = FALSE, eval = FALSE}
+# To build either run this line or click knit button in RStudio:
+rmarkdown::render("data-2026-fraser.Rmd")
+```
+
+```{r, packages, echo = FALSE}
+library(dplyr)
+load_all()
+```
+
+Adapting from `data-2026.Rmd` which was just for Columbia River. 
+
+Okay, there are several files in
+`data-for-2026-competition/DataPackage_Fraser_2026` but the one we want is I
+think just:
+
+- `ReturnsbyAge_WideFormat.csv`
+
+```{r, dataprep}
+data_dir <- paste0(here::here(),
+                   "/data-raw/data-for-2026-competition/DataPackage_Fraser_2026/")
+
+returns_all_raw <- read.csv(paste0(data_dir,
+                                   "ReturnsbyAge_WideFormat.csv"),
+                            comment.char = "#") %>%
+  tibble::as_tibble()
+
+returns_all <- returns_all_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River),
+                   factor)
+
+returns_all
+
+summary(returns_all)
+```
+
+This looks like same format as that in `data-2026.Rmd` for just Columbia.
+
+```{r, savedata1}
+returns_fraser_2026 <- returns_all
+usethis::use_data(returns_fraser_2026)
+```
