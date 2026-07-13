@@ -65,7 +65,7 @@ elsewhere).
 
 Other can adapt this as they see fit, it should provide a good template.
 
-Then see EDM analysis in TODO.
+Then see EDM analysis in `report-2026/`.
 
 # Fraser River EDM - what we would put into pbsEDM.
 
@@ -114,6 +114,10 @@ N Temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood
 - OISST - could either use Apr-Jul average for an area, or just pick the pixel
   closest to Halibut Bank buoy, which I think was our first choice.
 
+- OISST - talking to Kaitlyn and Jessie, suggest looking at SST for the winter,
+  as a proxy for other parts of the ecosystem (e.g. food availability for when
+  fish returning). Possibly Dec-Feb, or rather do Nov-Mar, which we will do.
+
 - peak (max daily value) and average daily Fraser River Discharge from Apr-Jun
   (same as buoy temperatures). Caveat now from SOPO meeting is that the Hope
   station is not so indicative of what's happening further down the river (I think).
@@ -139,11 +143,12 @@ N Temperature from buoys: "West Sea Otter" (Apr-Jul average), "East Dellwood
 ```{r, initialise}
 start_year <- 1940           # Had taken from Chilko one_returns_age45, but just
                              #  pick a slightly earlier year here
-end_year <- 2025              # Think this will be the year before the current
-# year, have to check (it was automated from specific salmon data in 2025 code)
+end_year <- 2026              # Did have this as the year before the current
+# year, but make it current year as will have things like winter PDO and winter
+# SST for the current year. Work out the years to analyse in the analysis code.```
 ```
 
-TODO Had `Analysis for Fraser River Chilko` etc. (see `analysis-2025-3.Rmd` but removing here to just focus
+Had `Analysis for Fraser River Chilko` etc. (see `analysis-2025-3.Rmd` but removing here to just focus
 on non-stock-specific covariates. 
 
 ### PDO in winter.
@@ -179,7 +184,7 @@ pdo_winter %>% tail()
 So we already have the `pdo_winter_mean` for 2026, but EDM should not need it as
 we expect the influence to be from two years before (for 2025 age4 returns)  during outmigration.
 
-### Temperature -- from OISST
+### Temperature in spring -- from OISST
 
 Just try pixel closest to Halibut Bank buoy, as can adapt code from Travis's vignette
   (and maybe functionalise it later).
@@ -201,15 +206,15 @@ sf_halibut_bank
 dist <- sf::st_distance(oisst_month, sf_halibut_bank)
 
 # subset data for points that are closest to buoy
-sub.dat <- oisst_month[which(dist == min(dist)),]
+subset_dat <- oisst_month[which(dist == min(dist)),]
 
-sub.dat    # geometry is just the same point repeated I think
+subset_dat    # geometry is just the same point repeated I think
 ```
 
 Now we can plot the time series for the data we've extracted
 
 ```{r, oisstallyears}
-sub.dat %>%
+subset_dat %>%
   mutate(year = as.factor(year)) %>%  # set year to a factor so each line is plotted separately
   ggplot() +
   geom_line(aes(x = month, y = sst, col = year)) +
@@ -218,24 +223,24 @@ sub.dat %>%
 
 To see where we are this year, let's plot just this year's data, with the
 historical distribution (not evaluating, year 2023 needs updating to
-`max(sub.dat$year)` but didn't work, ignoring).
+`max(subset_dat$year)` but didn't work, ignoring).
 
 ```{r, oisstoneyear, eval = FALSE, echo = FALSE}
 # calculate summary statistics (median, sd, 0.05 and 0.95 probabilities)
-sum.dat <- sub.dat %>%
+summary_dat <- subset_dat %>%
   group_by(month) %>%
   summarise(median_val = median(sst, na.rm = TRUE),
             sd_val = sd(sst, na.rm = TRUE),
             q05 = quantile(sst, probs = 0.05, na.rm = TRUE),
             q95 = quantile(sst, probs = 0.95, na.rm = TRUE))
 
-sub.dat %>%
+subset_dat %>%
   filter(year == 2023) %>%
   mutate(year = as.factor(year)) %>%
   ggplot() +
-  geom_ribbon(data = sum.dat, aes(x = month, ymin = q05, ymax = q95), fill = "grey") +
+  geom_ribbon(data = summary_dat, aes(x = month, ymin = q05, ymax = q95), fill = "grey") +
   geom_line(aes(x = month, y = sst), col = "red") +
-  geom_line(data = sum.dat, aes(x = month, y = median_val), col = "black", linewidth = 1) +
+  geom_line(data = summary_dat, aes(x = month, y = median_val), col = "black", linewidth = 1) +
   scale_y_continuous(name = attributes(oisst_month)$units)
 ```
 
@@ -244,7 +249,7 @@ year. Adapting from PDO code above (be nice to have a function!):
 
 ```{r, oisstavge}
 spring_months <- 4:7
-halibut_bank_spring_months <- dplyr::filter(sub.dat, month %in% spring_months)
+halibut_bank_spring_months <- dplyr::filter(subset_dat, month %in% spring_months)
 
 # Check the number of samples in each month:
 min(halibut_bank_spring_months$sst_n)     # 30, great.
@@ -268,7 +273,55 @@ plot(halibut_bank_spring$year,
      xlab = "Spring SST",
      ylab = "Year")
 ```
-So no `r end_year` `sst_spring`, which is fine as should not be impacting `r end_year` returns.
+
+### Temperature in winter -- from OISST
+
+Using Nov-Mar as suggested, which is also the same as for PDO in winter. Convention is labelling with the year of the January, as for PDO
+(and from discussion with oceanographers).
+
+```{r wintertemp}
+# Adapting from winter PDO and spring SST above
+expect_equal(winter_months,
+             c(1, 2, 3, 11, 12))  # in case it gets changed above
+
+halibut_bank_winter_months <- dplyr::filter(subset_dat, month %in% winter_months) %>%
+  sf::st_drop_geometry()
+
+# Check the number of samples in each month:
+min(halibut_bank_winter_months$sst_n)     # 27, good enough
+
+# Just missing the one day
+filter(halibut_bank_winter_months,
+       sst_n < 28)
+
+# Check all years (Nov-Dec) will be complete (yes):
+halibut_bank_winter_months
+
+halibut_bank_winter_months %>% tail()
+
+halibut_sst_winter_grouped <- cbind(halibut_bank_winter_months,
+                                    winter_group = rep(1:(length(unique(halibut_bank_winter_months$year)) - 1),
+                                              each = length(winter_months))) %>%
+  as_tibble()    # fails if not jan-mar in final year; need to ;
+# generalise TODO
+halibut_sst_winter_grouped
+halibut_sst_winter_grouped %>% tail()
+
+halibut_bank_winter <- summarise(group_by(halibut_sst_winter_grouped,
+                                 winter_group),
+                        year = max(year),
+                        sst_winter = mean(sst)) %>%
+  select(-c("winter_group"))
+
+halibut_bank_winter
+halibut_bank_winter %>% tail()
+
+plot(halibut_bank_winter$year,
+     halibut_bank_winter$sst_winter,
+     type = "o",
+     xlab = "Winter SST",
+     ylab = "Year")
+```
 
 
 ### Fraser River Discharge
@@ -437,6 +490,7 @@ tail(bi_input)
 fraser_covariates_2026 <- tibble(year = start_year:end_year) %>%
   left_join(pdo_winter) %>%
   left_join(halibut_bank_spring) %>%
+  left_join(halibut_bank_winter) %>%  
   left_join(fraser_mean_in_spring) %>%
   left_join(fraser_peak_in_spring) %>%
   left_join(north_pacific_salmon_covariates) %>%

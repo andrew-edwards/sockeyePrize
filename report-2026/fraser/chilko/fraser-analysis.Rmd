@@ -32,9 +32,9 @@ load_all()
 # library(sockeyePrize)
 library(dplyr)
 library(pbsEDM)
-# library(pacea)    # make sure to update
-# library(gridExtra)
-# library(ggplot2)
+library(pacea)    # make sure to update
+library(gridExtra)
+library(ggplot2)
 ```
 
 ```{r, river}
@@ -47,6 +47,16 @@ data for for the competition.
 
 Getting this running, then TODO checking the covariates we used last year for
 Fraser and switch to using those.
+
+TODO also check the ages we did last year for Fraser. See
+`report/fraser/late_stuart_simplified/analysis-2025-4-simplified.Rmd`.
+
+
+TODO From chat with Kaitlyn and Jessie, SST over winter is indicative of food
+available, and I think has been more hightly ranked in some of their
+analyses. Better to use Dec-Feb or rather Nov-Mar, so as a proxy for other parts
+of the ecosystem. So check what I did, and then update as necessary. Actually we
+did Apr-Jul so quite different.
 
 This is for age 3s, 4s, and 5s for `r river`, though have to do four calculations.
 
@@ -78,7 +88,7 @@ returns_fraser_2026
 summary(returns_fraser_2026)
 ```
 
-Later we will extract values for just the one river `r river`
+Later we will extract values for just the one river: `r river`
 
 
 ## Environmental covariates
@@ -115,9 +125,16 @@ constructed in `fraser-covariates-2026.Rmd`):
 
 # Returns
 
+See TODOs above.
+
 Not doing combined age4 then age5 like originally did for Fraser River, rather doing each of
 the four listed above. Think can just make one big tibble with everything, and
 then select the response variable appropriately.
+
+```{r, stop, cache = FALSE}
+knitr::knit_exit()
+```
+
 
 Just want the four age classes listed above (we did include more for Fraser River), and rename them:
 
@@ -160,7 +177,7 @@ input_returns <- select(river_returns,
                         age22 = AgeClass_2.2)
 summary(input_returns)
 
-input_returns %>% pacea::a()
+input_returns %>% a()
 ```
 
 Just one actual 0. No need to replace any leading zeros
