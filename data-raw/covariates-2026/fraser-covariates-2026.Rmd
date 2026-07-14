@@ -593,7 +593,7 @@ same analysis (because correlation has magnitude $>0.3$):
 
 ## Save covariates
 
-TODO In 2025 we removed the final row as I think it was messing up EDM because
+In 2025 we removed the final row as I think it was messing up EDM because
 it had some NA's. But do that in the analyses.
 
 ```{r, save}

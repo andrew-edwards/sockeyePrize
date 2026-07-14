@@ -30,6 +30,8 @@ library(dplyr)
 load_all()
 ```
 
+TODO Didn't render properly but I saved data okay in package manually TODO
+
 2026: Currently just have Columbia River values, so can't just rerun last year's
 code. 
 
@@ -94,6 +96,40 @@ but this one now has three Rivers.
 returns_columbia_2026 <- returns_all
 usethis::use_data(returns_columbia_2026)
 ```
+
+## Effective spawners for Fraser River
+
+Using the necessary code from 2025 (moving from below), just effective
+spawners. Only available for FR, but filename looks the same (almost -- they
+changed it from `...Form.csv` to `...Format.csv` to waste some of my time. Previously the 
+
+```{r, datapreparation77}
+full_long_raw <- read.csv("data-for-2026-competition/DataPackage_Fraser_2026/FullDataSet_LongFormat.csv",
+                          comment.char = "#") %>%
+  tibble::as_tibble()
+
+full_long_raw
+
+effective_spawners_2026 <- full_long_raw %>%
+  dplyr::mutate_at(dplyr::vars(System,
+                               River,
+                               Euro,
+                               GR),
+                   factor)
+
+effective_spawners_2026
+
+summary(effective_spawners_2026)
+```
+Just FR. So save in package. Looks like they changed some column names also, but
+deal with that in analysis.
+
+Save data in package, doing manually (not evaluated) to not keep overwriting.
+```{r, savedata2, eval = FALSE}
+usethis::use_data(effective_spawners_2026, overwrite = TRUE)
+```
+
+
 
 
 ```{r, stop, cache = FALSE}
