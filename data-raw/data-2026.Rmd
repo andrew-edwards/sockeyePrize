@@ -99,11 +99,14 @@ usethis::use_data(returns_columbia_2026)
 
 ## Effective spawners for Fraser River
 
+Had to adapt from 2025 as they changed the data so need to use a different file.
+
 Using the necessary code from 2025 (moving from below), just effective
 spawners. Only available for FR, but filename looks the same (almost -- they
 changed it from `...Form.csv` to `...Format.csv` to waste some of my time. Previously the 
 
-```{r, datapreparation77}
+THIS is not evaluated or needed, see next bit.
+```{r, datapreparation77, eval = FALSE}
 full_long_raw <- read.csv("data-for-2026-competition/DataPackage_Fraser_2026/FullDataSet_LongFormat.csv",
                           comment.char = "#") %>%
   tibble::as_tibble()
@@ -121,15 +124,30 @@ effective_spawners_2026
 
 summary(effective_spawners_2026)
 ```
-Just FR. So save in package. Looks like they changed some column names also, but
+Not doing: Just FR. So save in package. Looks like they changed some column names also, but
 deal with that in analysis.
 
-Save data in package, doing manually (not evaluated) to not keep overwriting.
-```{r, savedata2, eval = FALSE}
-usethis::use_data(effective_spawners_2026, overwrite = TRUE)
+```{r, datapreparation78}
+full_long_raw <- read.csv("data-for-2026-competition/DataPackage_Fraser_2026/ALT_Spawners_EffectiveFemales_FRASER_2026.csv",
+                          comment.char = "#") %>%
+  tibble::as_tibble()
+
+full_long_raw
+
+effective_spawners_2026 <- full_long_raw %>%
+  dplyr::rename(Late_Stuart = Late.Stuart)
+
+effective_spawners_2026
+
+summary(effective_spawners_2026)
 ```
 
 
+
+Save data in package, doing manually (not evaluated) to not keep overwriting.
+```{r, savedata3, eval = FALSE}
+usethis::use_data(effective_spawners_2026, overwrite = TRUE)
+```
 
 
 ```{r, stop, cache = FALSE}

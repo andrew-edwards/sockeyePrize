@@ -41,7 +41,7 @@ library(ggplot2)
 river <- "Chilko"
 ```
 
-Getting this running, then TODO checking the covariates we used last year for
+Getting this running, then doing the covariates we used last year for
 Fraser and switch to using those.
 
 Using the ages we did last year for Fraser. See
@@ -63,9 +63,45 @@ For Columbia did:  age 3s, 4s, and 5s for `r river`, though have to do four
 calculations. FOr FR 2025 looks like we combined data and did age4 and age5,
 hence doing that here.
 
-
 If you changed the lags to rerun the multiview embedding, you need to delete the
 saved .rds file.
+
+## Environmental covariates
+
+Example years are for **returns in 2021 as an example**.
+
+Covariates would be (with their names in `fraser_covariates_2026` data tibble
+constructed in `fraser-covariates-2026.Rmd`):
+
+- PDO in the year prior to outmigration (Nov 2019-March 2020) for returning
+  AgeClass_1.1. (`pdo_winter_mean`)
+
+- PDO in the year prior to outmigration (Nov 2018-March 2019) for returning AgeClass_1.2 and AgeClass_2.2.
+
+- PDO in the year prior to outmigration (Nov 2017-March 2018) for returning AgeClass_1.3.
+
+- Was going to get temperature from buoys: "Halibut Bank" (Apr-Jun average),
+  "West Sea Otter" (Apr-Jul average), "East Dellwood Knolls" (Apr-Jul average),
+  Year of outmigration, after the PDO Mar calculation. SOme missing data for
+  those I think, which is why went for OISST for the pixel closest to Halibut
+  Bank buoy, then averaged each year over April to July. Saved as column `sst_spring`.
+
+- Kaitlyn and Jessie suggested winter temp from Nov-Mar, so doing that as
+  `sst_winter`, the year of outmigration (so same as `sst_spring`).
+
+- total pink salmon abundance in N Pacific returning the same return year as
+  being predicted (2021), to predict AgeClass 1.1, AgeClass_1.2 and AgeClass_2.2
+  returns (noting pink salmon might not compete with AgeClass_1.1). Column is `pink`.
+
+- total pink salmon abundance in N Pacific returning the year prior to the year
+  being predicted (2020), to predict AgeClass_1.3 returns (an alternative
+  hypothesis is that pink salmon in the same return year as being predicted
+  could be used for this age class as well). Column is `total_ocean_salmon`.
+
+- copepods the year of outmigration (same as SST). Total biomass anomaly. Might
+  not have such a long time series; `zoo_total_biomass`.
+
+- bifurcation index, year of outmigration. `bi_anomaly`.
 
 # Fraser River
 
@@ -82,7 +118,8 @@ to `FALSE` after you have run the code once.
 
 # Returns
 
-```{r classes}
+```{r classes, eval = FALSE}
+# 2025 code, not evaluating:
 classes_age4 <- c("AgeClass_0.3",
                   "AgeClass_1.2",
                   "AgeClass_2.1")
@@ -95,8 +132,32 @@ returns_fraser_2026
 summary(returns_fraser_2026)
 ```
 
+I got confused in 2026 about the above, since we are looking at things like PDO
+in the year prior to outmigration, which will not be the same for all the
+age4's. Should really do each age class separately, but no time for that. Carrie
+said: I think for 2025, we assumed almost all age fours were 1.2's and all age fives were 1.3's (which is pretty close to correct), and made the alignments accordingly. 
 
-We want to predict `returns_fraser_2026ll$Total_Returns`, by doing age4 and age5
+So seems more logical to just do the 1.2's for age4 and 1.3's for age5, so
+thought about doing
+that for 2026, except 2.2 has lots of 0's but also some big values, and 1.3 has
+some NA's and some 0's. So let's use both for age5:
+
+```{r classes2026}
+# 2026 code:
+returns_fraser_2026
+summary(returns_fraser_2026)
+
+classes_age4 <- c(# "AgeClass_0.3",
+                  "AgeClass_1.2")
+                  #"AgeClass_2.1")
+
+classes_age5 <- c(# "AgeClass_0.4",
+                  "AgeClass_1.3",
+                  "AgeClass_2.2")
+                  # "AgeClass_3.1")   # Seem to be none anyway
+```
+
+We want to predict `returns_fraser_2026$Total_Returns`, by doing age4 and age5
 separately and then sum.
 
 ```{r sumreturns}
@@ -159,35 +220,26 @@ For Chilko and other FR, we want to use effective spawners (which we don't have
 for other systems). Brood year is in there, which is what we want to use
 and let EDM do the lagging.
 
+They changed effective spawners set up. I just saved in one data object, think
+can just join with the correct river and then use the correct lag for age4 or age4.
+
 ```{r, eff1}
 effective_spawners_2026
-eff <- select(effective_spawners,
-              River,
-              Euro,
-              BroodYear,
-              Total_Spawners_BroodYear,
-              Total_EFS_BroodYear)
-eff
-summary(eff)
+# This does not work this year, since column names have changed
+#eff <- select(effective_spawners_2026,
+#              River,
+#              Euro,
+#              BroodYear,
+#              Total_Spawners_BroodYear,
+#              Total_EFS_BroodYear)
+#eff
+#summary(eff)
 ```
 
-The effective spawners for a brood year should be the same (for all
-age classes, which is `Euro`), and that is what we want (also check total; don't
-really need this for each stock, but code already done):
-```{r eff2}
-eff_summ <- summarise(group_by(eff,
-                               River,
-                               BroodYear),
-                      total_spawners_brood_year =
-                        unique(Total_Spawners_BroodYear),
-                      efs_brood_year = unique(Total_EFS_BroodYear)) %>%
-  ungroup()
-eff_summ
-eff_summ %>% tail()
-```
-Just need the total and EFS columns for the analysis.
+think can ignore this chunk in 2026:
 
-```{r, onespanw}
+
+```{r, onespanw, eval = FALSE}
 one_spawners <- filter(eff_summ,
                        River == river)
 
@@ -203,17 +255,21 @@ one_spawners_use %>% a()
 
 Now join returns, spawners, and System-wide covariates into one tibble.
 
-
 ```{r input}
-input_river <- left_join(input_returns,
-                         one_spawners_use)
+effective_spawners_river <- select(effective_spawners_2026,
+                                   year = BroodYear,   # year is return year in
+                                   # analysis, so need to specify the correct
+                                   # lag for EDM
+                                   effective_spawners = all_of(river))
 
-input_river <- left_join(input_river,
-                         fraser_covariates_2026)
+effective_spawners_river
+
+input_river <- left_join(input_returns,
+                         effective_spawners_river) %>%
+  left_join(fraser_covariates_2026)
 input_river %>% head(10) %>% a()
 input_river %>% tail() %>% a()
 ```
-
 
 ```{r, indices}
 summary(input_river)
@@ -269,36 +325,32 @@ corrplot::corrplot(cor(input_river,
   type = "upper" # show only upper side
   )
 ```
+ 
 
-HERE - seems okay so far. Need to figure out covariates to use, doing the
-correlation stuff. Have to think a little. Run the .rmd
-
-TODO move the envtl covriates explanation section up (this current part is
-modified from something else).
-
-
-For Late Stuart, the coefficients from `pdo_winter_mean` downwards are the same
-as for Chilko, as expected because they are the non-stock specific covariates.
 
 Using 0.3 to exclude related covariates. Updating these notes for stock-specific
 covariates:
 
-- `total_spawners` and `effective_spawners` (as expected), go with effective (Catarina).
+- `total_spawners` (don't have wrangled in 2026) and `effective_spawners` (as expected), go with effective (Catarina).
 
-- Chilko: `total_spawners` or `effective_spawners` with either `pink` or `total`; though
+- Chilko: `total_spawners` or `effective_spawners` with either `pink` or `total_ocean_salmon`; though
   could always try (0.3 cut off is a bit arbitrary). I think we should stick
-  with `effective_spawners` and `pink` though. Late Stuart: not correlated now
+  with `effective_spawners` (if available) and `pink` though (even though 0.42 correlation). Late Stuart: TODO 2025: not correlated now
   (so bit more justified in sticking with them). Very cyclic compared to Chilko.
 
-So, as for Chilko, remove:
+So, as for Chilko 2025, remove:
 
 - `fraser_peak_spring`
 
-- `total`
+- `total_ocean_salmon`
 
 - `total_spawners`
 
-Given BI was not in the best runs for either age4 or age5 for Chilko, not going
+- `bi_anomaly`
+
+Let's try keeping `sst_spring` and `sst_winter` to see what comes out. 
+
+2025: Given BI was not in the best runs for either age4 or age5 for Chilko, not going
 to bother with it going forward (and correlated with PDO anyway).
 
 
@@ -311,32 +363,44 @@ tried PDO and BI separately).
 ## Remove correlated covariates
 
 As noted above, removing three correlated covariates, plus BI since not going to
-sue now.
+use now.
 
 ```{r, reduced}
 input_river_reduced <- select(input_river,
                               -c("fraser_peak_spring",
-                                 "total",
-                                 "total_spawners",
+                                 "total_ocean_salmon",
+                                 # "total_spawners",
                                  "bi_anomaly"))
+input_river_reduced %>% tail() %>% a()
+
+corrplot::corrplot(cor(input_river_reduced,
+                       use = "pairwise.complete.obs"),
+  method = "number",
+  type = "upper" # show only upper side
+  )
+
 ```
 
 ## Age 4
 
-First, lags with PDO (not BI). Can take a while so saving the results as .rds
+Can take a while so saving the results as .rds
 and not rerunning if the results are already saved. IF YOU WANT TO RERUN THE
 MULTIVIEW EMBEDDING you need to set `rerun_age4 = TRUE` here.
 
 ```{r, red1}
 rerun_age4 <- FALSE
 
+# should rename to lags_reduced_age4 when time TODOo
 lags_reduced_pdo <- list(age4 = c(1, 2, 3, 4),
                          effective_spawners = c(4),
-                         pdo_winter_mean = c(1, 2),
-                         fraser_mean_spring = c(1, 2),
-                         pink = c(1, 2),
-                         sst_spring = c(1, 2),
-                         zoo_total_biomass = c(1, 2))
+                         pdo_winter_mean = c(2), # age4 just 2 year lag wrt return year as only 1.2
+                         fraser_mean_spring = c(1, 2),  # not sure, could
+                         # maybe even get 2026 value so have a lag of 0 in future
+                         pink = c(2),  # not exactly sure, but dont' have 2025
+                         # value yet so do 2 lag
+                         sst_spring = c(2),  # same as PDO
+                         sst_winter = c(2),
+                         zoo_total_biomass = c(2))
 
 if(rerun_age4){
   tictoc::tic()
@@ -358,12 +422,15 @@ See the results
 mve_reduced_pdo$rho_prediction_from_mve
 mve_reduced_pdo$rho_each_top_subset
 
+plot_mve_spaces(mve_reduced_pdo,
+                rho_on_top = FALSE)
+
 # So there's lots, so need to just show a few of these:
-mve_reduced_pdo$lags_of_top_subsets[1:20]
+# mve_reduced_pdo$lags_of_top_subsets[1:20]
 
 # Look at the top few predictions:
 
-mve_reduced_pdo[["response_each_subset"]][mve_reduced_pdo$top_subsets_for_rho_index[1:5]]
+# mve_reduced_pdo[["response_each_subset"]][mve_reduced_pdo$top_subsets_for_rho_index[1:5]]
 
 mve_reduced_pdo$response_predicted_from_mve   # Overall mve prediction, including for T+1.
 ```
@@ -382,17 +449,21 @@ abline(a = 0, b = 1)
 abline(h = mve_reduced_pdo$response_predicted_from_mve[T+1], col = "red")
 ```
 
+
+
+
 ## Age 5
 
-Remove lags that weren't important for age4 (see Chilko for more explanation),
+Remove lags that weren't important for age4 (see Chilko 2025 for more explanation),
 else age5 will take about 6 hours to run.
 
-So looking at lags from the top 20 sets from age4 results above. Manually copy the code that defined them, then remove
+2025 to reduce size, think we're okay for 2026: So looking at lags from the top 20 sets from age4 results above. Manually copy the code that defined them, then remove
 ones that show up in top 20 sets, to leave ones not in top 20. Easiest to copy
 `mve_reduced_pdo$lags_of_top_subsets[1:20]` into R to scroll through and search.
 
 First set of age4 lags.
-```{r, lagscheck}
+Not running:
+```{r, lagscheck, eval = FALSE}
 lags_reduced_pdo
 
 lags_reduced_pdo_not_in_top_20 <- list(zoo_total_biomass = c(1, 2))
@@ -400,71 +471,72 @@ lags_reduced_pdo_not_in_top_20 <- list(zoo_total_biomass = c(1, 2))
 # Chilko had fraser_mean_spring lag 1 also
 ```
 
-So may as well not use those for age5, since need to narrow down. Zooplankton
-could be because of the short time series, haven't dug into it.
-
-So results in 19 lags below, which is about two hours.
-
 Can take a while so saving the results as .rds
 and not rerunning if the results are already saved. IF YOU WANT TO RERUN THE
 MULTIVIEW EMBEDDING you need to set `rerun_age5 = TRUE` here.
 
 ```{r, red3}
 rerun_age5 <- FALSE
-lags_reduced_pdo_age5 <- list(age4 = c(1),
-                              age5 = c(1, 2, 3, 4, 5),
-                              effective_spawners = c(5),
-                              pdo_winter_mean = c(1, 2, 3),
+# PDO and sst: age5 2 year lag for 2.2 and 3 year lag (for 1.3)
+lags_reduced_age5 <- list(age4 = c(1),
+                          age5 = c(1, 2, 3, 4, 5),
+                          effective_spawners = c(5),
+                          pdo_winter_mean = c(2, 3),
                               fraser_mean_spring = c(1, 2, 3),
-                              pink = c(1, 2, 3),
-                              sst_spring = c(1, 2, 3))
-                              # zoo_total_biomass = c(1, 2, 3))
+                              pink = c(2, 3),
+                              sst_spring = c(2, 3))
+                              # zoo_total_biomass = c(2, 3)) # not doing to
+                              # reduce number of lags
                               # bi_anomaly = c(1, 2))
 if(rerun_age5){
   tictoc::tic()
-  mve_reduced_pdo_age5 <- multiview_embedding(data = input_river_reduced,
+  mve_reduced_age5 <- multiview_embedding(data = input_river_reduced,
                                               response = "age5",
-                                              lags = lags_reduced_pdo_age5)
+                                              lags = lags_reduced_age5)
   # Centre and scaling and first differencing get done automatically, in
   #  state_space_reconstruction_for_sve()
   tictoc::toc()
   
-  saveRDS(mve_reduced_pdo_age5, file = "mve_reduced_pdo_age5.rds")
+  saveRDS(mve_reduced_age5, file = "mve_reduced_age5.rds")
 } else {
-  mve_reduced_pdo_age5 <- readRDS("mve_reduced_pdo_age5.rds")
+  mve_reduced_age5 <- readRDS("mve_reduced_age5.rds")
 }
-
-
 ```
 
 See results.
 
 ```{r, red3load}
-mve_reduced_pdo_age5$rho_prediction_from_mve
-mve_reduced_pdo_age5$rho_each_top_subset
+mve_reduced_age5$rho_prediction_from_mve
+mve_reduced_age5$rho_each_top_subset
+
+# Taking too long (think as so many combinations to figure out), need to just
+#get numbers TODO and in other rivers
+#plot_mve_spaces(mve_reduced_age5,
+#                rho_on_top = FALSE,
+#                max_embeddings = 20)
 
 # So there's lots, so need to just show a few of these:
-mve_reduced_pdo_age5$lags_of_top_subsets[1:20]
+# mve_reduced_age5$lags_of_top_subsets[1:20]
 
 # Look at the top few predictions:
 
-mve_reduced_pdo_age5[["response_each_subset"]][mve_reduced_pdo_age5$top_subsets_for_rho_index[1:5]]
+# mve_reduced_age5[["response_each_subset"]][mve_reduced_age5$top_subsets_for_rho_index[1:5]]
 
-mve_reduced_pdo_age5$response_predicted_from_mve   # Overall mve prediction, including for T+1.
+mve_reduced_age5$response_predicted_from_mve   # Overall mve prediction, including for T+1.
 ```
 
 ```{r red3fig}
 plot(input_river$age5,
-     mve_reduced_pdo_age5$response_predicted_from_mve[-(T+1)],
+     mve_reduced_age5$response_predicted_from_mve[-(T+1)],
      xlab = "Age5 returns - observed",
      ylab = "Age5 returns - predicted")
 
 legend("topleft", legend = c(paste("rho is",
-                                    round(mve_reduced_pdo_age5$rho_prediction_from_mve, 2)),
+                                    round(mve_reduced_age5$rho_prediction_from_mve, 2)),
                               paste("prediction is",
-                                    f(mve_reduced_pdo_age5$response_predicted_from_mve[T+1]))))
+                                    f(mve_reduced_age5$response_predicted_from_mve[T+1]))))
 abline(a = 0, b = 1)
-abline(h = mve_reduced_pdo_age5$response_predicted_from_mve[T+1], col = "red")
+abline(h = mve_reduced_age5$response_predicted_from_mve[T+1], col = "red")
 ```
 
 ## Summarise results
@@ -476,7 +548,7 @@ best like Chilko, as we haven't done a BI run here).
 lim_common_max <- max(c(input_river$age4,
                         mve_reduced_pdo$response_predicted_from_mve,
                         input_river$age5,
-                        mve_reduced_pdo_age5$response_predicted_from_mve),
+                        mve_reduced_age5$response_predicted_from_mve),
                       na.rm = TRUE)
 lim_common_max
 lim_common = c(0, lim_common_max)
@@ -525,7 +597,7 @@ legend("topleft",
 
 # Age5 correlation
 plot(input_river$age5,
-     mve_reduced_pdo_age5$response_predicted_from_mve[-(T+1)],
+     mve_reduced_age5$response_predicted_from_mve[-(T+1)],
      xlab = "Age5 returns - observed",
      ylab = "Age5 returns - predicted",
      main = "PDO age5",
@@ -533,11 +605,11 @@ plot(input_river$age5,
      ylim = lim_common)
 
 legend("topleft", legend = c(paste("rho is",
-                                   round(mve_reduced_pdo_age5$rho_prediction_from_mve, 2)),
+                                   round(mve_reduced_age5$rho_prediction_from_mve, 2)),
                               paste("prediction is",
-                                    f(mve_reduced_pdo_age5$response_predicted_from_mve[T+1]))))
+                                    f(mve_reduced_age5$response_predicted_from_mve[T+1]))))
 abline(a = 0, b = 1)
-abline(h = mve_reduced_pdo_age5$response_predicted_from_mve[T+1], col = "red")
+abline(h = mve_reduced_age5$response_predicted_from_mve[T+1], col = "red")
 
 # Age5 time series
 plot(input_river$year,
@@ -549,7 +621,7 @@ plot(input_river$year,
      # ylim = lim_common)
 
 points(c(input_river$year, max(input_river$year) + 1),
-       mve_reduced_pdo_age5$response_predicted_from_mve,
+       mve_reduced_age5$response_predicted_from_mve,
        pch = 16,
        col = "red",
        cex = 0.8)
@@ -570,8 +642,8 @@ summary <- tibble(age = "age4",
 summary <- rbind(summary,
                  c("age5",
                    "PDO",
-                   mve_reduced_pdo_age5$rho_prediction_from_mve,
-                   mve_reduced_pdo_age5$response_predicted_from_mve[T+1])) %>%
+                   mve_reduced_age5$rho_prediction_from_mve,
+                   mve_reduced_age5$response_predicted_from_mve[T+1])) %>%
   dplyr::mutate_at(vars(age,
                         run),
                    factor) %>%
@@ -590,599 +662,4 @@ total_returns_prediction <- sum(summary$prediction)
 
 The prediction for combined age4 and age5 returns `r river` is ... `r f(total_returns_prediction)`.
 
-<!-- End of from 2025-4-simplified -->
 
-```{r, stop, cache = FALSE}
-knitr::knit_exit()
-```
-
-
-TODO Can delete this onwards I think, was for Columbia 2026 but FR is quite different.
-
-## River-specific salmon data
-
-Try to predict the following (data are saved in `returns_fraser_2026`):
-
-- `age11` (my notation): AgeClass_1.1 returns each year, **say 2021 as an example**. 
-  
-- `age12`: AgeClass_1.2 returns each year, (2021), an additional covariate would be AgeClass_1.1 returns.
-
-- `age13`: AgeClass_1.3 returns each year, (2021), an additional covariate would be AgeClass_1.2 returns.
-
-- `age22`: AgeClass_2.2 returns each year, (2021)
-
-Do each separately and then give the sum as the total prediction.
-
-The full data are:
-
-```{r, returns}
-returns_fraser_2026
-summary(returns_fraser_2026)
-```
-
-Later we will extract values for just the one river: `r river`
-
-
-## Environmental covariates
-
-Covariates would be (with their names in `fraser_covariates_2026` data tibble
-constructed in `fraser-covariates-2026.Rmd`):
-
-- PDO in the year prior to outmigration (Nov 2019-March 2020) for returning
-  AgeClass_1.1. (`pdo_winter_mean`)
-
-- PDO in the year prior to outmigration (Nov 2018-March 2019) for returning AgeClass_1.2 and AgeClass_2.2.
-
-- PDO in the year prior to outmigration (Nov 2017-March 2018) for returning AgeClass_1.3.
-
-- As for Fraser River, was going to get temperature from buoys: "Halibut Bank" (Apr-Jun average),
-  "West Sea Otter" (Apr-Jul average), "East Dellwood Knolls" (Apr-Jul average),
-  Year of outmigration, after the PDO Mar calculation. SOme missing data for
-  those I think, which is why went for OISST for the pixel closest to Halibut
-  Bank buoy, then averaged each year over April to July. Saved as column `sst_spring`.
-
-- total pink salmon abundance in N Pacific returning the same return year as
-  being predicted (2021), to predict AgeClass 1.1, AgeClass_1.2 and AgeClass_2.2
-  returns (noting pink salmon might not compete with AgeClass_1.1). Column is `pink`.
-
-- total pink salmon abundance in N Pacific returning the year prior to the year
-  being predicted (2020), to predict AgeClass_1.3 returns (an alternative
-  hypothesis is that pink salmon in the same return year as being predicted
-  could be used for this age class as well). Column is `total_ocean_salmon`.
-
-- copepods the year of outmigration (same as SST). Total biomass anomaly. Might
-  not have such a long time series; `zoo_total_biomass`.
-
-- bifurcation index, year of outmigration. `bi_anomaly`.
-
-# Returns
-
-See TODOs above.
-
-Not doing combined age4 then age5 like originally did for Fraser River, rather doing each of
-the four listed above. Think can just make one big tibble with everything, and
-then select the response variable appropriately.
-
-```{r, stop, cache = FALSE}
-knitr::knit_exit()
-```
-
-
-Just want the four age classes listed above (we did include more for Fraser River), and rename them:
-
-```{r classes}
-classes <- c("AgeClass_1.1",
-             "AgeClass_1.2",
-             "AgeClass_1.3",
-             "AgeClass_2.2")
-
-river_returns <-
-  dplyr::filter(returns_fraser_2026,
-                River == river) %>%
-  dplyr::select(ReturnYear,
-                Total_Returns,
-                unlist(classes)) %>%
-  rowwise() %>%
-  mutate(total_of_included = sum(c_across(any_of(classes)),
-                                 na.rm = TRUE)) %>%
-  mutate(total_difference = Total_Returns - total_of_included) %>% ungroup()
-# to check what we're missing by excluding some classes
-
-river_returns
-summary(river_returns)
-summary(river_returns$total_of_included)
-summary(river_returns$total_difference)
-select(river_returns, ReturnYear, total_difference)
-max(river_returns$total_of_included)
-max(river_returns$total_difference)
-```
-So max excluded is about `r
-f(max(river_returns$total_difference)/max(river_returns$total_of_included)* 100)`% of the maximum total (might not be the same year),
-which is fine.
-
-```{r rename}
-input_returns <- select(river_returns,
-                        year = ReturnYear,
-                        age11 = AgeClass_1.1,
-                        age12 = AgeClass_1.2,
-                        age13 = AgeClass_1.3,
-                        age22 = AgeClass_2.2)
-summary(input_returns)
-
-input_returns %>% a()
-```
-
-Just one actual 0. No need to replace any leading zeros
-like for Fraser River.
-
-```{r, back}
-# Now add five earlier years with NA's, since things like PDO and spawners might
-#  go back 4-5 years.
-yr <- min(input_returns$year)
-yr
-input_returns <- rbind(c(yr - 5, rep(NA, 4)),
-                     c(yr - 4, rep(NA, 4)),
-                     c(yr - 3, rep(NA, 4)),
-                     c(yr - 2, rep(NA, 4)),
-                     c(yr - 1, rep(NA, 4)),
-                     input_returns)
-input_returns
-input_returns %>% tail()
-
-# For Columbia, not sure if needed:
-if(min(input_returns$year != 1980)){
-  stop("check covariates and years")
-}
-
-```
-
-## Columbia covariates
-
-Now join with the covariates, but remove Fraser River spring flows:
-
-```{r, returnscov}
-input_returns_covariates <- left_join(input_returns,
-                                      fraser_covariates_2026) %>%
-  select(-c("fraser_mean_spring",
-            "fraser_peak_spring"))
-input_returns_covariates
-head(input_returns_covariates) %>% a()
-
-tail(input_returns_covariates) %>% a()
-```
-
-Prob better to automate from the results instead of this TODO:
-```{r, Tcalc}
-T <- nrow(input_returns_covariates)   # T as in index T is final year of data, can include
-                        # NA's at start. Not used in calculations, just plotting
-                        # and printing results.
-
-T    # do double check that manually, esp for age5 and other rivers
-```
-
-# EDM with covariates
-
-Do a big plot of everything:
-```{r plotcovariates, fig.height = 9}
-to_plot <- tidyr::pivot_longer(input_returns_covariates,
-                               cols = -year) %>%
-  mutate(name = factor(name))
-
-p <- ggplot(to_plot,
-            aes(year, value)) +
-  geom_path() +                        # leaves gaps for NA's, but none now
-  # facet_wrap(~name, scales = "free_y")
-  facet_grid(name ~ ., scales = "free_y")
-
-p
-
-# It reorders them alphabetically; need something like this:
-#  mutate(name = factor(name, levels = paste0("X", 1:12))) %>%
-```
-
-```{r corrplot}
-# pairs(input_returns_covariates,
-#      lower.panel = panel.cor)
-GGally::ggpairs(input_returns_covariates)
-```
-
-Useful, but of course doesn't highlight correlation of lags.
-```{r corrplot22, fig.width = 9}
-corrplot::corrplot(cor(input_returns_covariates,
-                       use = "pairwise.complete.obs"),
-  method = "number",
-  type = "upper" # show only upper side
-  )
-```
-
-Go with removing environmental variables that have correlations $>0.3$ (based on
-what we did in Haigh et al.), just do manually based on this plot:
-```{r corrplot23, fig.width = 9}
-corrplot::corrplot(cor(select(input_returns_covariates,
-                              -(year:age22)),
-                       use = "pairwise.complete.obs"),
-  method = "number",
-  type = "upper" # show only upper side
-  )
-```
-
-Coefficients $>0.3$ and decision (just keep `pink` like last year, as `pink`
-dominate the `total_ocean_salmon`; though maybe more logical to keep total, so
-ignore `total_ocean_salmon`?)
-
-- `pdo_winter_mean` and `pink` - quite distinct variables, so keep both.
-
-- `pdo_winter_mean` and `bi_anomaly` - `bi` is shorter so remove, ignore in
-  remainder of this list
-
-- `sst_spring` and `pink` - again, distinct, so keep both
-
-Using this in calls below to `multiview_embedding()`.
-
-# MVE analysis
-
-Age12 are aged 4!!! etc.
-
-For Fraser, for age4 we did age4 lags of `c(1, 2, 3, 4)`, and for age5 added lag
-of 5. So take same approach here, similarly for age12 since age 3. Plus two
-years of lags for age4 environmental covariates, and the previous returns as
-outlined above.
-
-## Age11
-
-TODO may need to remove final row as has NA's and think that caused issues
-before.
-
-These are age3 when returning. Spend a whole year in freshwater first.
-
-```{r, age11calc}
-age11_lags <- list(age11 = c(1, 2, 3),
-                   pdo_winter_mean = c(1),
-                   pink = c(1, 2),
-                   sst_spring = c(1))
-if(!file.exists("age11_res.rds")){
-  tictoc::tic()
-  age11_res <- multiview_embedding(data = input_returns_covariates,
-                                   response = "age11",
-                                   lags = age11_lags)
-  # Centre and scaling and first differencing get done automatically, in
-  #  state_space_reconstruction_for_sve()
-  tictoc::toc()
-
-  saveRDS(age11_res, file = "age11_res.rds")
-} else {
-  age11_res <- readRDS("age11_res.rds")
-}
-
-```
-
-Results:
-
-```{r, age11load}
-age11_res$rho_prediction_from_mve
-age11_res$rho_each_top_subset
-
-# So there's lots, so need to just show a few of these:
-age11_res$lags_of_top_subsets
-
-# Look at the top few predictions:
-
-age11_res[["response_each_subset"]][age11_res$top_subsets_for_rho_index[1:5]]
-
-age11_res$response_predicted_from_mve   # Overall mve prediction, including for T+1.
-```
-
-```{r age11fig}
-plot(input_returns_covariates$age11,
-     age11_res$response_predicted_from_mve[-(T+1)],
-     xlab = "Age11 returns - observed",
-     ylab = "Age11 returns - predicted")
-
-legend("topleft", legend = c(paste("rho is",
-                                    round(age11_res$rho_prediction_from_mve, 2)),
-                              paste("prediction is",
-                                    f(age11_res$response_predicted_from_mve[T+1]))))
-abline(a = 0, b = 1)
-abline(h = age11_res$response_predicted_from_mve[T+1], col = "red")
-```
-
-### Age12
-
-Four year olds when return.
-```{r, age12calc}
-age12_lags <- list(age12 = c(1, 2, 3, 4),
-                   age11 = c(1),
-                   pdo_winter_mean = c(1, 2),
-                   pink = c(1, 2),
-                   sst_spring = c(1, 2))
-
-if(!file.exists("age12_res.rds")){
-  tictoc::tic()
-  age12_res <- multiview_embedding(data = input_returns_covariates,
-                                   response = "age12",
-                                   lags = age12_lags)
-  # Centre and scaling and first differencing get done automatically, in
-#  state_space_reconstruction_for_sve()
-  tictoc::toc()
-
-  saveRDS(age12_res, file = "age12_res.rds")
-} else {
-  age12_res <- readRDS("age12_res.rds")
-}
-```
-
-Results:
-
-```{r, resultsage12}
-age12_res$rho_prediction_from_mve
-age12_res$rho_each_top_subset
-
-# So there's lots, so need to just show a few of these:
-age12_res$lags_of_top_subsets[1:10]
-
-# Look at the top few predictions:
-
-age12_res[["response_each_subset"]][age12_res$top_subsets_for_rho_index[1:5]]
-
-age12_res$response_predicted_from_mve   # Overall mve prediction, including for T+1.
-```
-
-```{r age12fig}
-plot(input_returns_covariates$age12,
-     age12_res$response_predicted_from_mve[-(T+1)],
-     xlab = "Age12 returns - observed",
-     ylab = "Age12 returns - predicted")
-
-legend("topleft", legend = c(paste("rho is",
-                                    round(age12_res$rho_prediction_from_mve, 2)),
-                              paste("prediction is",
-                                    f(age12_res$response_predicted_from_mve[T+1]))))
-abline(a = 0, b = 1)
-abline(h = age12_res$response_predicted_from_mve[T+1], col = "red")
-```
-
-# Age13
-
-Five year olds, could add age11 but there are not many of them.
-
-```{r, age13calc}
-age13_lags <- list(age13 = c(1, 2, 3, 4, 5),
-                   age12 = c(1),
-                   pdo_winter_mean = c(1, 2, 3),
-                   pink = c(1, 2, 3),
-                   sst_spring = c(1, 2, 3))
-
-if(!file.exists("age13_res.rds")){
-  tictoc::tic()
-  age13_res <- multiview_embedding(data = input_returns_covariates,
-                                   response = "age13",
-                                   lags = age13_lags)
-  # Centre and scaling and first differencing get done automatically, in
-  #  state_space_reconstruction_for_sve()
-  tictoc::toc()
-  
-  saveRDS(age13_res, file = "age13_res.rds")
-} else {
-  age13_res <- readRDS("age13_res.rds")
-}
-```
-
-Results
-```{r, age13res}
-age13_res$rho_prediction_from_mve
-age13_res$rho_each_top_subset
-
-# So there's lots, so need to just show a few of these:
-age13_res$lags_of_top_subsets[1:10]   
-
-# Look at the top few predictions:
-
-age13_res[["response_each_subset"]][age13_res$top_subsets_for_rho_index[1:5]]
-
-age13_res$response_predicted_from_mve   # Overall mve prediction, including for T+1.
-```
-
-```{r age13fig}
-plot(input_returns_covariates$age13,
-     age13_res$response_predicted_from_mve[-(T+1)],
-     xlab = "Age13 returns - observed",
-     ylab = "Age13 returns - predicted")
-
-legend("topleft", legend = c(paste("rho is",
-                                    round(age13_res$rho_prediction_from_mve, 2)),
-                              paste("prediction is",
-                                    f(age13_res$response_predicted_from_mve[T+1]))))
-abline(a = 0, b = 1)
-abline(h = age13_res$response_predicted_from_mve[T+1], col = "red")
-```
-
-# Age22
-
-Five year olds, could add age11 but there are not many of them.
-
-```{r, age22calc}
-age22_lags <- list(age22 = c(1, 2, 3, 4, 5),
-                   pdo_winter_mean = c(1, 2, 3),
-                   pink = c(1, 2, 3),
-                   sst_spring = c(1, 2, 3))
-
-if(!file.exists("age22_res.rds")){
-  tictoc::tic()
-  age22_res <- multiview_embedding(data = input_returns_covariates,
-                                   response = "age22",
-                                 lags = age22_lags)
-  # Centre and scaling and first differencing get done automatically, in
-  #  state_space_reconstruction_for_sve()
-  tictoc::toc()
-
-  saveRDS(age22_res, file = "age22_res.rds")
-} else {
-  age22_res <- readRDS("age22_res.rds")
-}
-```
-Results
-
-```{r, age22res}
-age22_res$rho_prediction_from_mve
-age22_res$rho_each_top_subset
-
-# So there's lots, so need to just show a few of these:
-age22_res$lags_of_top_subsets[1:10]
-
-# Look at the top few predictions:
-
-age22_res[["response_each_subset"]][age22_res$top_subsets_for_rho_index[1:5]]
-
-age22_res$response_predicted_from_mve   # Overall mve prediction, including for T+1.
-```
-
-```{r age22fig}
-plot(input_returns_covariates$age22,
-     age22_res$response_predicted_from_mve[-(T+1)],
-     xlab = "Age22 returns - observed",
-     ylab = "Age22 returns - predicted")
-
-legend("topleft", legend = c(paste("rho is",
-                                    round(age22_res$rho_prediction_from_mve, 2)),
-                              paste("prediction is",
-                                    f(age22_res$response_predicted_from_mve[T+1]))))
-abline(a = 0, b = 1)
-abline(h = age22_res$response_predicted_from_mve[T+1], col = "red")
-```
-
-## Summarise results
-
-Summarise results of the four different age classes, and add together for final prediction.
-
-```{r, summarylim}
-lim_common_max <- max(c(input_returns_covariates$age11,
-                        input_returns_covariates$age12,
-                        input_returns_covariates$age13,
-                        input_returns_covariates$age22,
-                        age11_res$response_predicted_from_mve,
-                        age12_res$response_predicted_from_mve,
-                        age13_res$response_predicted_from_mve,
-                        age22_res$response_predicted_from_mve),
-                      na.rm = TRUE)
-lim_common_max
-lim_common = c(0, lim_common_max)
-```
-
-Do panel plot of time series, not repeating the earlier ones.
-```{r, summaryplot, fig.height = 9}
-par(mfrow = c(4,1))
-
-# Age11 time series
-plot(input_returns_covariates$year,
-     input_returns_covariates$age11,
-     type = "o",
-     main = "Age11",
-     xlab = "Year",
-     ylab = "Age11 returns",
-     ylim = lim_common)
-
-points(c(input_returns_covariates$year, max(input_returns_covariates$year) + 1),
-       age11_res$response_predicted_from_mve,
-       pch = 16,
-       col = "red",
-       cex = 0.8)
-
-legend("topleft",
-       legend = c("observed", "predicted"),
-       pch = c(1, 16),
-       col = c("black", "red"))
-
-# Age12 time series
-plot(input_returns_covariates$year,
-     input_returns_covariates$age12,
-     type = "o",
-     main = "Age12",
-     xlab = "Year",
-     ylab = "Age12 returns",
-     ylim = lim_common)
-
-points(c(input_returns_covariates$year, max(input_returns_covariates$year) + 1),
-       age12_res$response_predicted_from_mve,
-       pch = 16,
-       col = "red",
-       cex = 0.8)
-
-legend("topleft",
-       legend = c("observed", "predicted"),
-       pch = c(1, 16),
-       col = c("black", "red"))
-
-# Age13 time series
-plot(input_returns_covariates$year,
-     input_returns_covariates$age13,
-     type = "o",
-     main = "Age13",
-     xlab = "Year",
-     ylab = "Age13 returns",
-     ylim = lim_common)
-
-points(c(input_returns_covariates$year, max(input_returns_covariates$year) + 1),
-       age13_res$response_predicted_from_mve,
-       pch = 16,
-       col = "red",
-       cex = 0.8)
-
-legend("topleft",
-       legend = c("observed", "predicted"),
-       pch = c(1, 16),
-       col = c("black", "red"))
-
-
-# Age22 time series
-plot(input_returns_covariates$year,
-     input_returns_covariates$age22,
-     type = "o",
-     main = "Age22",
-     xlab = "Year",
-     ylab = "Age22 returns",
-     ylim = lim_common)
-
-points(c(input_returns_covariates$year, max(input_returns_covariates$year) + 1),
-       age22_res$response_predicted_from_mve,
-       pch = 16,
-       col = "red",
-       cex = 0.8)
-
-legend("topleft",
-       legend = c("observed", "predicted"),
-       pch = c(1, 16),
-       col = c("black", "red"))
-```
-
-Summarise, and then sum together age4 and age5 to get our prediction.
-
-```{r, summarise}
-summary <- tibble(class = "age11",
-                  rho = age11_res$rho_prediction_from_mve ,
-                  prediction = age11_res$response_predicted_from_mve[T+1])
-summary <- rbind(summary,
-                 c("age12",
-                   age12_res$rho_prediction_from_mve,
-                   age12_res$response_predicted_from_mve[T+1]),
-                 c("age13",
-                   age13_res$rho_prediction_from_mve,
-                   age13_res$response_predicted_from_mve[T+1]),
-                 c("age22",
-                   age22_res$rho_prediction_from_mve,
-                   age22_res$response_predicted_from_mve[T+1])) %>%
-  dplyr::mutate_at(vars(class),
-                   factor) %>%
-  dplyr::mutate_at(vars(rho,
-                        prediction),
-                   as.numeric)
-
-summary
-
-knitr::kable(summary,
-             digits = c(NA, 2, 6))
-stopifnot(nrow(summary) == 4)
-
-total_returns_prediction <- sum(summary$prediction)
-```
-
-The prediction for combined age4 and age5 returns for `r river` is ... `r f(total_returns_prediction)`.

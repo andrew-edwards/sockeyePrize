@@ -13,6 +13,8 @@ Starting a report-2026/ to then share with Kaitlyn and Stephanie etc.
 Results for Salmon Prize 2026
 *****************************
 
+TODO copy from report-2026 or move this to there
+
 Predictions from our analyses are:
 Bonneville: 522,618
 Okanagan:   435,309
@@ -36,7 +38,8 @@ details once we had things running.
 
 All code is available at https://github.com/andrew-edwards/sockeyePrize, though
 is not easily usable by anyone else at the moment and there are various
-improvements we would make. Most of the covariates were taken from our pacea R package.
+improvements we would make. Most of the covariates were taken from our pacea R
+package and we used our pbsEDM R package for the calculations.
 
 Edwards A.M, Rogers L.A., and Holt C.A. (2024). Explaining empirical dynamic
 modelling using verbal, graphical and mathematical approaches. Ecology and
